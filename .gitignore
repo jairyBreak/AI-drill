@@ -1,0 +1,11 @@
+
+**/build/
+**/*.p4i
+
+**/log/
+**/pcap/
+**/*.pcap
+**/*.pcapng
+
+__pycache__/
+*.pyc
