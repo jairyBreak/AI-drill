@@ -1,0 +1,42 @@
+{
+  "p4_src": "p4src/ecmp.p4",
+  "cli": true,
+  "pcap_dump": true,
+  "enable_log": true,
+  "topology": {
+    "assignment_strategy": "mixed", 
+    "auto_arp_tables": true,
+    "auto_gw_arp": true,
+    "links": [
+      ["h1", "l1"], ["h2", "l2"],
+      ["l1", "s1",{"bw": 5}], ["l1", "s2",{"bw": 5}], 
+      ["l2", "s1",{"bw": 5}], ["l2", "s2",{"bw": 5}]
+    ],
+    "hosts": {
+      "h1": {
+        "ip": "10.0.1.1/24",        
+        "gw": "10.0.1.254",           
+        "mac": "00:00:00:00:00:01"  
+      },
+      "h2": {
+        "ip": "10.0.2.2/24",
+        "gw": "10.0.2.254",
+        "mac": "00:00:00:00:00:02"
+      }
+    },
+    "switches": {
+      "s1": {
+        "cli_input": "s1-commands.txt"
+      },
+      "s2": {
+        "cli_input": "s2-commands.txt"
+      },
+      "l1": {
+        "cli_input": "l1-commands.txt"
+      },
+      "l2": {
+        "cli_input": "l2-commands.txt"
+      }
+    }
+  }
+}

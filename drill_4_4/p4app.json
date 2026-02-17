@@ -1,0 +1,62 @@
+{
+  "p4_src": "p4src/ecmp.p4",
+  "cli": true,
+  "pcap_dump": true,
+  "enable_log": true,
+  "topology": {
+    "assignment_strategy": "mixed", 
+    "auto_arp_tables": true,
+    "auto_gw_arp": true,
+    "links": [
+      ["h1", "l1"], ["h2", "l2"], ["h3", "l3"], ["h4", "l4"],
+      ["l1", "s1",{"bw": 5}], ["l1", "s2",{"bw": 5}],["l1", "s3",{"bw": 5}], ["l1", "s4",{"bw": 5}], 
+      ["l2", "s1",{"bw": 5}], ["l2", "s2",{"bw": 5}],["l2", "s3",{"bw": 5}], ["l2", "s4",{"bw": 5}],
+      ["l3", "s1",{"bw": 5}], ["l3", "s2",{"bw": 5}],["l3", "s3",{"bw": 5}], ["l3", "s4",{"bw": 5}], 
+      ["l4", "s1",{"bw": 5}], ["l4", "s2",{"bw": 5}],["l4", "s3",{"bw": 5}], ["l4", "s4",{"bw": 5}]
+    ],
+    "hosts": {
+      "h1": {
+        "ip": "10.0.1.1/24",        
+        "gw": "10.0.1.254"
+      },
+      "h2": {
+        "ip": "10.0.2.2/24",
+        "gw": "10.0.2.254"
+      },
+      "h3": {
+        "ip": "10.0.3.3/24",        
+        "gw": "10.0.3.254"            
+      },
+      "h4": {
+        "ip": "10.0.4.4/24",
+        "gw": "10.0.4.254"
+      }
+    },
+    "switches": {
+      "s1": {
+        "cli_input": "s1-commands.txt"
+      },
+      "s2": {
+        "cli_input": "s2-commands.txt"
+      },
+      "s3": {
+        "cli_input": "s3-commands.txt"
+      },
+      "s4": {
+        "cli_input": "s4-commands.txt"
+      },
+      "l1": {
+        "cli_input": "l1-commands.txt"
+      },
+      "l2": {
+        "cli_input": "l2-commands.txt"
+      },
+      "l3": {
+        "cli_input": "l3-commands.txt"
+      },
+      "l4": {
+        "cli_input": "l4-commands.txt"
+      }
+    }
+  }
+}

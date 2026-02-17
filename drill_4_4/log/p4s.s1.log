@@ -1,0 +1,1358 @@
+Calling target program-options parser
+[09:15:58.549] [bmv2] [D] [thread 50249] Set default default entry for table 'MyIngress.ipv4_lpm': MyIngress.drop - 
+[09:15:58.549] [bmv2] [D] [thread 50249] Set default default entry for table 'MyIngress.ecmp_group_to_nhop': NoAction - 
+[09:15:58.550] [bmv2] [D] [thread 50249] Set default default entry for table 'tbl_ecmp152': ecmp152 - 
+[09:15:58.550] [bmv2] [D] [thread 50249] Set default default entry for table 'tbl_ecmp154': ecmp154 - 
+Adding interface s1-eth1 as port 1
+[09:15:58.554] [bmv2] [D] [thread 50249] Adding interface s1-eth1 as port 1
+Adding interface s1-eth2 as port 2
+[09:15:58.574] [bmv2] [D] [thread 50249] Adding interface s1-eth2 as port 2
+Adding interface s1-eth3 as port 3
+[09:15:58.577] [bmv2] [D] [thread 50249] Adding interface s1-eth3 as port 3
+Adding interface s1-eth4 as port 4
+[09:15:58.588] [bmv2] [D] [thread 50249] Adding interface s1-eth4 as port 4
+[09:15:58.601] [bmv2] [I] [thread 50249] Starting Thrift server on port 9094
+[09:15:58.602] [bmv2] [I] [thread 50249] Thrift server was started
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Processing packet received on port 1
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Parser 'parser': start
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.605] [bmv2] [T] [thread 50255] [0.0] [cxt 0] Bytes parsed: 14
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Parser 'parser': end
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.605] [bmv2] [T] [thread 50255] [0.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.605] [bmv2] [D] [thread 50255] [0.0] [cxt 0] Egress port is 0
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Looking up key:
+
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] Action ecmp152
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.605] [bmv2] [T] [thread 50256] [0.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.605] [bmv2] [D] [thread 50256] [0.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.605] [bmv2] [D] [thread 50260] [0.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Processing packet received on port 3
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Parser 'parser': start
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.606] [bmv2] [T] [thread 50255] [1.0] [cxt 0] Bytes parsed: 14
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Parser 'parser': end
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.606] [bmv2] [T] [thread 50255] [1.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.606] [bmv2] [D] [thread 50255] [1.0] [cxt 0] Egress port is 0
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Processing packet received on port 1
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Parser 'parser': start
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.606] [bmv2] [T] [thread 50255] [2.0] [cxt 0] Bytes parsed: 14
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Parser 'parser': end
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.606] [bmv2] [T] [thread 50255] [2.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.606] [bmv2] [D] [thread 50255] [2.0] [cxt 0] Egress port is 0
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Processing packet received on port 3
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Parser 'parser': start
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.606] [bmv2] [T] [thread 50255] [3.0] [cxt 0] Bytes parsed: 14
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Parser 'parser': end
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.606] [bmv2] [T] [thread 50255] [3.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.606] [bmv2] [D] [thread 50255] [3.0] [cxt 0] Egress port is 0
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Looking up key:
+
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] Action ecmp152
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.606] [bmv2] [T] [thread 50256] [1.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.606] [bmv2] [D] [thread 50256] [1.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.606] [bmv2] [D] [thread 50260] [1.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.606] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.606] [bmv2] [T] [thread 50256] [2.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.606] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Looking up key:
+
+[09:15:58.606] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.606] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.606] [bmv2] [T] [thread 50256] [2.0] [cxt 0] Action ecmp152
+[09:15:58.606] [bmv2] [T] [thread 50256] [2.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.607] [bmv2] [T] [thread 50256] [2.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.607] [bmv2] [T] [thread 50256] [2.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.607] [bmv2] [T] [thread 50256] [2.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.607] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.607] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Processing packet received on port 1
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Parser 'parser': start
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.607] [bmv2] [T] [thread 50255] [4.0] [cxt 0] Bytes parsed: 14
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Parser 'parser': end
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.607] [bmv2] [T] [thread 50256] [2.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.607] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.607] [bmv2] [D] [thread 50256] [2.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.607] [bmv2] [D] [thread 50260] [2.0] [cxt 0] Transmitting packet of size 70 out of port 0
+[09:15:58.607] [bmv2] [T] [thread 50255] [4.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.607] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.608] [bmv2] [D] [thread 50255] [4.0] [cxt 0] Egress port is 0
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Processing packet received on port 3
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Parser 'parser': start
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.607] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Looking up key:
+
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.608] [bmv2] [T] [thread 50255] [5.0] [cxt 0] Bytes parsed: 14
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] Action ecmp152
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Parser 'parser': end
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.608] [bmv2] [T] [thread 50255] [5.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.608] [bmv2] [T] [thread 50256] [3.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.608] [bmv2] [D] [thread 50256] [3.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.608] [bmv2] [D] [thread 50260] [3.0] [cxt 0] Transmitting packet of size 70 out of port 0
+[09:15:58.608] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.608] [bmv2] [T] [thread 50256] [4.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.608] [bmv2] [D] [thread 50255] [5.0] [cxt 0] Egress port is 0
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Processing packet received on port 1
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Parser 'parser': start
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.609] [bmv2] [T] [thread 50255] [6.0] [cxt 0] Bytes parsed: 14
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Parser 'parser': end
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.609] [bmv2] [T] [thread 50255] [6.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.609] [bmv2] [D] [thread 50255] [6.0] [cxt 0] Egress port is 0
+[09:15:58.608] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Looking up key:
+
+[09:15:58.609] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.609] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.609] [bmv2] [T] [thread 50256] [4.0] [cxt 0] Action ecmp152
+[09:15:58.609] [bmv2] [T] [thread 50256] [4.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.609] [bmv2] [T] [thread 50256] [4.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.609] [bmv2] [T] [thread 50256] [4.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.609] [bmv2] [T] [thread 50256] [4.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.609] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.609] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.609] [bmv2] [T] [thread 50256] [4.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.609] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.609] [bmv2] [D] [thread 50256] [4.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.609] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.609] [bmv2] [T] [thread 50256] [5.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.609] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Looking up key:
+
+[09:15:58.609] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.609] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.609] [bmv2] [T] [thread 50256] [5.0] [cxt 0] Action ecmp152
+[09:15:58.609] [bmv2] [T] [thread 50256] [5.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.609] [bmv2] [T] [thread 50256] [5.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.609] [bmv2] [D] [thread 50260] [4.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.609] [bmv2] [T] [thread 50256] [5.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.609] [bmv2] [T] [thread 50256] [5.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.609] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.609] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.610] [bmv2] [T] [thread 50256] [5.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.610] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.610] [bmv2] [D] [thread 50256] [5.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Looking up key:
+
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] Action ecmp152
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.610] [bmv2] [D] [thread 50260] [5.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.610] [bmv2] [T] [thread 50256] [6.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.610] [bmv2] [D] [thread 50256] [6.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.610] [bmv2] [D] [thread 50260] [6.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Processing packet received on port 1
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Parser 'parser': start
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.690] [bmv2] [T] [thread 50255] [7.0] [cxt 0] Bytes parsed: 14
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Parser 'parser': end
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.690] [bmv2] [T] [thread 50255] [7.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.690] [bmv2] [D] [thread 50255] [7.0] [cxt 0] Egress port is 0
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Processing packet received on port 3
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Parser 'parser': start
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.690] [bmv2] [T] [thread 50255] [8.0] [cxt 0] Bytes parsed: 14
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Parser 'parser': end
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.690] [bmv2] [T] [thread 50255] [8.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.690] [bmv2] [D] [thread 50255] [8.0] [cxt 0] Egress port is 0
+[09:15:58.690] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.690] [bmv2] [T] [thread 50256] [7.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.690] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Looking up key:
+
+[09:15:58.691] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.691] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.691] [bmv2] [T] [thread 50256] [7.0] [cxt 0] Action ecmp152
+[09:15:58.691] [bmv2] [T] [thread 50256] [7.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.691] [bmv2] [T] [thread 50256] [7.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.691] [bmv2] [T] [thread 50256] [7.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.691] [bmv2] [T] [thread 50256] [7.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.691] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.691] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.691] [bmv2] [T] [thread 50256] [7.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.691] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.691] [bmv2] [D] [thread 50256] [7.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Looking up key:
+
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] Action ecmp152
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.691] [bmv2] [T] [thread 50256] [8.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.691] [bmv2] [D] [thread 50256] [8.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.692] [bmv2] [D] [thread 50260] [7.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:58.692] [bmv2] [D] [thread 50260] [8.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:58.710] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Processing packet received on port 1
+[09:15:58.710] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Parser 'parser': start
+[09:15:58.710] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.711] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.711] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.711] [bmv2] [T] [thread 50255] [9.0] [cxt 0] Bytes parsed: 14
+[09:15:58.711] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Parser 'parser': end
+[09:15:58.711] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.711] [bmv2] [T] [thread 50255] [9.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.711] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.711] [bmv2] [D] [thread 50255] [9.0] [cxt 0] Egress port is 0
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Processing packet received on port 3
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Parser 'parser': start
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.711] [bmv2] [T] [thread 50255] [10.0] [cxt 0] Bytes parsed: 14
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Parser 'parser': end
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.711] [bmv2] [T] [thread 50255] [10.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.711] [bmv2] [D] [thread 50255] [10.0] [cxt 0] Egress port is 0
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Processing packet received on port 1
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Parser 'parser': start
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.711] [bmv2] [T] [thread 50255] [11.0] [cxt 0] Bytes parsed: 14
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Parser 'parser': end
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.711] [bmv2] [T] [thread 50255] [11.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.711] [bmv2] [D] [thread 50255] [11.0] [cxt 0] Egress port is 0
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Looking up key:
+
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] Action ecmp152
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.711] [bmv2] [T] [thread 50256] [9.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.711] [bmv2] [D] [thread 50256] [9.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.711] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.711] [bmv2] [T] [thread 50256] [10.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.711] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Looking up key:
+
+[09:15:58.711] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.711] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.711] [bmv2] [T] [thread 50256] [10.0] [cxt 0] Action ecmp152
+[09:15:58.712] [bmv2] [T] [thread 50256] [10.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.712] [bmv2] [T] [thread 50256] [10.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.712] [bmv2] [T] [thread 50256] [10.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.712] [bmv2] [T] [thread 50256] [10.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.712] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.712] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.712] [bmv2] [T] [thread 50256] [10.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.712] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.712] [bmv2] [D] [thread 50256] [10.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Looking up key:
+
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] Action ecmp152
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.712] [bmv2] [T] [thread 50256] [11.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.712] [bmv2] [D] [thread 50256] [11.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.712] [bmv2] [D] [thread 50260] [9.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:58.712] [bmv2] [D] [thread 50260] [10.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:58.712] [bmv2] [D] [thread 50260] [11.0] [cxt 0] Transmitting packet of size 199 out of port 0
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Processing packet received on port 1
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Parser 'parser': start
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.722] [bmv2] [T] [thread 50255] [12.0] [cxt 0] Bytes parsed: 14
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Parser 'parser': end
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.722] [bmv2] [T] [thread 50255] [12.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.722] [bmv2] [D] [thread 50255] [12.0] [cxt 0] Egress port is 0
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Looking up key:
+
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] Action ecmp152
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.725] [bmv2] [T] [thread 50256] [12.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.725] [bmv2] [D] [thread 50256] [12.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.725] [bmv2] [D] [thread 50260] [12.0] [cxt 0] Transmitting packet of size 110 out of port 0
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Processing packet received on port 2
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Parser 'parser': start
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.828] [bmv2] [T] [thread 50255] [13.0] [cxt 0] Bytes parsed: 14
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Parser 'parser': end
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.828] [bmv2] [T] [thread 50255] [13.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.828] [bmv2] [D] [thread 50255] [13.0] [cxt 0] Egress port is 0
+[09:15:58.828] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.828] [bmv2] [T] [thread 50256] [13.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.828] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Looking up key:
+
+[09:15:58.828] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.828] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.828] [bmv2] [T] [thread 50256] [13.0] [cxt 0] Action ecmp152
+[09:15:58.828] [bmv2] [T] [thread 50256] [13.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.828] [bmv2] [T] [thread 50256] [13.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.828] [bmv2] [T] [thread 50256] [13.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.828] [bmv2] [T] [thread 50256] [13.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.828] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.829] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.829] [bmv2] [T] [thread 50256] [13.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.829] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.829] [bmv2] [D] [thread 50256] [13.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.829] [bmv2] [D] [thread 50260] [13.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Processing packet received on port 3
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Parser 'parser': start
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.845] [bmv2] [T] [thread 50255] [14.0] [cxt 0] Bytes parsed: 14
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Parser 'parser': end
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.845] [bmv2] [T] [thread 50255] [14.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.845] [bmv2] [D] [thread 50255] [14.0] [cxt 0] Egress port is 0
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Processing packet received on port 3
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Parser 'parser': start
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.848] [bmv2] [T] [thread 50255] [15.0] [cxt 0] Bytes parsed: 14
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Parser 'parser': end
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.848] [bmv2] [T] [thread 50255] [15.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.848] [bmv2] [D] [thread 50255] [15.0] [cxt 0] Egress port is 0
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Looking up key:
+
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] Action ecmp152
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.848] [bmv2] [T] [thread 50256] [14.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.848] [bmv2] [D] [thread 50256] [14.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.848] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Looking up key:
+
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] Action ecmp152
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.849] [bmv2] [T] [thread 50256] [15.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.849] [bmv2] [D] [thread 50256] [15.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.851] [bmv2] [D] [thread 50260] [14.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.851] [bmv2] [D] [thread 50260] [15.0] [cxt 0] Transmitting packet of size 70 out of port 0
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Processing packet received on port 3
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Parser 'parser': start
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.855] [bmv2] [T] [thread 50255] [16.0] [cxt 0] Bytes parsed: 14
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Parser 'parser': end
+[09:15:58.855] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.856] [bmv2] [T] [thread 50255] [16.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.856] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.856] [bmv2] [D] [thread 50255] [16.0] [cxt 0] Egress port is 0
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Looking up key:
+
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] Action ecmp152
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.856] [bmv2] [T] [thread 50256] [16.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.856] [bmv2] [D] [thread 50256] [16.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.856] [bmv2] [D] [thread 50260] [16.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Processing packet received on port 2
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Parser 'parser': start
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.907] [bmv2] [T] [thread 50255] [17.0] [cxt 0] Bytes parsed: 14
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Parser 'parser': end
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.907] [bmv2] [T] [thread 50255] [17.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.907] [bmv2] [D] [thread 50255] [17.0] [cxt 0] Egress port is 0
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Looking up key:
+
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] Action ecmp152
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.907] [bmv2] [T] [thread 50256] [17.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.907] [bmv2] [D] [thread 50256] [17.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.907] [bmv2] [D] [thread 50260] [17.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Processing packet received on port 3
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Parser 'parser': start
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.953] [bmv2] [T] [thread 50255] [18.0] [cxt 0] Bytes parsed: 14
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Parser 'parser': end
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.953] [bmv2] [T] [thread 50255] [18.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.953] [bmv2] [D] [thread 50255] [18.0] [cxt 0] Egress port is 0
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Looking up key:
+
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] Action ecmp152
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.953] [bmv2] [T] [thread 50256] [18.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.953] [bmv2] [D] [thread 50256] [18.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.953] [bmv2] [D] [thread 50260] [18.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Processing packet received on port 3
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Parser 'parser': start
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.955] [bmv2] [T] [thread 50255] [19.0] [cxt 0] Bytes parsed: 14
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Parser 'parser': end
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.955] [bmv2] [T] [thread 50255] [19.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.955] [bmv2] [D] [thread 50255] [19.0] [cxt 0] Egress port is 0
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Looking up key:
+
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] Action ecmp152
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.956] [bmv2] [T] [thread 50256] [19.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.956] [bmv2] [D] [thread 50256] [19.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.956] [bmv2] [D] [thread 50260] [19.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Processing packet received on port 1
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Parser 'parser': start
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.967] [bmv2] [T] [thread 50255] [20.0] [cxt 0] Bytes parsed: 14
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Parser 'parser': end
+[09:15:58.967] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.967] [bmv2] [T] [thread 50255] [20.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.968] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.968] [bmv2] [D] [thread 50255] [20.0] [cxt 0] Egress port is 0
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Processing packet received on port 3
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Parser 'parser': start
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.968] [bmv2] [T] [thread 50255] [21.0] [cxt 0] Bytes parsed: 14
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Parser 'parser': end
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.968] [bmv2] [T] [thread 50255] [21.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.968] [bmv2] [D] [thread 50255] [21.0] [cxt 0] Egress port is 0
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Looking up key:
+
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] Action ecmp152
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.969] [bmv2] [T] [thread 50256] [20.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.969] [bmv2] [D] [thread 50256] [20.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.969] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.969] [bmv2] [T] [thread 50256] [21.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.969] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Looking up key:
+
+[09:15:58.969] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.969] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.969] [bmv2] [T] [thread 50256] [21.0] [cxt 0] Action ecmp152
+[09:15:58.969] [bmv2] [T] [thread 50256] [21.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.970] [bmv2] [D] [thread 50260] [20.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Processing packet received on port 3
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Parser 'parser': start
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.972] [bmv2] [T] [thread 50255] [22.0] [cxt 0] Bytes parsed: 14
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Parser 'parser': end
+[09:15:58.972] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.972] [bmv2] [T] [thread 50255] [22.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.973] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.973] [bmv2] [D] [thread 50255] [22.0] [cxt 0] Egress port is 0
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Processing packet received on port 4
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Parser 'parser': start
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.973] [bmv2] [T] [thread 50255] [23.0] [cxt 0] Bytes parsed: 14
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Parser 'parser': end
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.973] [bmv2] [T] [thread 50255] [23.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.973] [bmv2] [D] [thread 50255] [23.0] [cxt 0] Egress port is 0
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Processing packet received on port 4
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Parser 'parser': start
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.973] [bmv2] [T] [thread 50255] [24.0] [cxt 0] Bytes parsed: 14
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Parser 'parser': end
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.973] [bmv2] [T] [thread 50255] [24.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.973] [bmv2] [D] [thread 50255] [24.0] [cxt 0] Egress port is 0
+[09:15:58.969] [bmv2] [T] [thread 50256] [21.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.974] [bmv2] [T] [thread 50256] [21.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.974] [bmv2] [T] [thread 50256] [21.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.974] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.974] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.974] [bmv2] [T] [thread 50256] [21.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.974] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.974] [bmv2] [D] [thread 50256] [21.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Looking up key:
+
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] Action ecmp152
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.974] [bmv2] [T] [thread 50256] [22.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.974] [bmv2] [D] [thread 50256] [22.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.974] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.974] [bmv2] [T] [thread 50256] [23.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.974] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Looking up key:
+
+[09:15:58.974] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.974] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.974] [bmv2] [T] [thread 50256] [23.0] [cxt 0] Action ecmp152
+[09:15:58.974] [bmv2] [T] [thread 50256] [23.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.974] [bmv2] [T] [thread 50256] [23.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.975] [bmv2] [T] [thread 50256] [23.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.975] [bmv2] [T] [thread 50256] [23.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.975] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.975] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.975] [bmv2] [T] [thread 50256] [23.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.975] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.975] [bmv2] [D] [thread 50256] [23.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Looking up key:
+
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] Action ecmp152
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.975] [bmv2] [T] [thread 50256] [24.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.975] [bmv2] [D] [thread 50256] [24.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.975] [bmv2] [D] [thread 50260] [21.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:58.975] [bmv2] [D] [thread 50260] [22.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:58.975] [bmv2] [D] [thread 50260] [23.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.976] [bmv2] [D] [thread 50260] [24.0] [cxt 0] Transmitting packet of size 70 out of port 0
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Processing packet received on port 4
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Parser 'parser': start
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.980] [bmv2] [T] [thread 50255] [25.0] [cxt 0] Bytes parsed: 14
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Parser 'parser': end
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.980] [bmv2] [T] [thread 50255] [25.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.980] [bmv2] [D] [thread 50255] [25.0] [cxt 0] Egress port is 0
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Looking up key:
+
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] Action ecmp152
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.981] [bmv2] [T] [thread 50256] [25.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.981] [bmv2] [D] [thread 50256] [25.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.981] [bmv2] [D] [thread 50260] [25.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Processing packet received on port 1
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Parser 'parser': start
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Extracting header 'ethernet'
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:58.988] [bmv2] [T] [thread 50255] [26.0] [cxt 0] Bytes parsed: 14
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Parser 'parser': end
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Pipeline 'ingress': start
+[09:15:58.988] [bmv2] [T] [thread 50255] [26.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Pipeline 'ingress': end
+[09:15:58.988] [bmv2] [D] [thread 50255] [26.0] [cxt 0] Egress port is 0
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Pipeline 'egress': start
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Looking up key:
+
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] Action ecmp152
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Pipeline 'egress': end
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Deparser 'deparser': start
+[09:15:58.988] [bmv2] [T] [thread 50256] [26.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:58.988] [bmv2] [D] [thread 50256] [26.0] [cxt 0] Deparser 'deparser': end
+[09:15:58.988] [bmv2] [D] [thread 50260] [26.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Processing packet received on port 3
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Parser 'parser': start
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.028] [bmv2] [T] [thread 50255] [27.0] [cxt 0] Bytes parsed: 14
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Parser 'parser': end
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.028] [bmv2] [T] [thread 50255] [27.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.028] [bmv2] [D] [thread 50255] [27.0] [cxt 0] Egress port is 0
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Processing packet received on port 2
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Parser 'parser': start
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.028] [bmv2] [T] [thread 50255] [28.0] [cxt 0] Bytes parsed: 14
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Parser 'parser': end
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.028] [bmv2] [T] [thread 50255] [28.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.028] [bmv2] [D] [thread 50255] [28.0] [cxt 0] Egress port is 0
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Looking up key:
+
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] Action ecmp152
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.028] [bmv2] [T] [thread 50256] [27.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.028] [bmv2] [D] [thread 50256] [27.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.029] [bmv2] [D] [thread 50260] [27.0] [cxt 0] Transmitting packet of size 110 out of port 0
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Looking up key:
+
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] Action ecmp152
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.030] [bmv2] [T] [thread 50256] [28.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.030] [bmv2] [D] [thread 50256] [28.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.030] [bmv2] [D] [thread 50260] [28.0] [cxt 0] Transmitting packet of size 199 out of port 0
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Processing packet received on port 4
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Parser 'parser': start
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.077] [bmv2] [T] [thread 50255] [29.0] [cxt 0] Bytes parsed: 14
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Parser 'parser': end
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.077] [bmv2] [T] [thread 50255] [29.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.077] [bmv2] [D] [thread 50255] [29.0] [cxt 0] Egress port is 0
+[09:15:59.077] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.077] [bmv2] [T] [thread 50256] [29.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.077] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Looking up key:
+
+[09:15:59.077] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.077] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.077] [bmv2] [T] [thread 50256] [29.0] [cxt 0] Action ecmp152
+[09:15:59.077] [bmv2] [T] [thread 50256] [29.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.077] [bmv2] [T] [thread 50256] [29.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.077] [bmv2] [T] [thread 50256] [29.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.077] [bmv2] [T] [thread 50256] [29.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.077] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.077] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.078] [bmv2] [T] [thread 50256] [29.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.078] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.078] [bmv2] [D] [thread 50256] [29.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.078] [bmv2] [D] [thread 50260] [29.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Processing packet received on port 4
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Parser 'parser': start
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.092] [bmv2] [T] [thread 50255] [30.0] [cxt 0] Bytes parsed: 14
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Parser 'parser': end
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.092] [bmv2] [T] [thread 50255] [30.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.092] [bmv2] [D] [thread 50255] [30.0] [cxt 0] Egress port is 0
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Looking up key:
+
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] Action ecmp152
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.092] [bmv2] [T] [thread 50256] [30.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.092] [bmv2] [D] [thread 50256] [30.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.092] [bmv2] [D] [thread 50260] [30.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Processing packet received on port 2
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Parser 'parser': start
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.100] [bmv2] [T] [thread 50255] [31.0] [cxt 0] Bytes parsed: 14
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Parser 'parser': end
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.100] [bmv2] [T] [thread 50255] [31.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.100] [bmv2] [D] [thread 50255] [31.0] [cxt 0] Egress port is 0
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Processing packet received on port 2
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Parser 'parser': start
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.100] [bmv2] [T] [thread 50255] [32.0] [cxt 0] Bytes parsed: 14
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Parser 'parser': end
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.100] [bmv2] [T] [thread 50255] [32.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.100] [bmv2] [D] [thread 50255] [32.0] [cxt 0] Egress port is 0
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Processing packet received on port 2
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Parser 'parser': start
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.100] [bmv2] [T] [thread 50255] [33.0] [cxt 0] Bytes parsed: 14
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Parser 'parser': end
+[09:15:59.100] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.101] [bmv2] [T] [thread 50255] [33.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.101] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.101] [bmv2] [D] [thread 50255] [33.0] [cxt 0] Egress port is 0
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Looking up key:
+
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] Action ecmp152
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.101] [bmv2] [T] [thread 50256] [31.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.101] [bmv2] [D] [thread 50256] [31.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Looking up key:
+
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] Action ecmp152
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.101] [bmv2] [T] [thread 50256] [32.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.101] [bmv2] [D] [thread 50256] [32.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Looking up key:
+
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] Action ecmp152
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.101] [bmv2] [T] [thread 50256] [33.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.101] [bmv2] [D] [thread 50256] [33.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.101] [bmv2] [D] [thread 50260] [31.0] [cxt 0] Transmitting packet of size 110 out of port 0
+[09:15:59.101] [bmv2] [D] [thread 50260] [32.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:59.101] [bmv2] [D] [thread 50260] [33.0] [cxt 0] Transmitting packet of size 70 out of port 0
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Processing packet received on port 2
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Parser 'parser': start
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.102] [bmv2] [T] [thread 50255] [34.0] [cxt 0] Bytes parsed: 14
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Parser 'parser': end
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.102] [bmv2] [T] [thread 50255] [34.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.102] [bmv2] [D] [thread 50255] [34.0] [cxt 0] Egress port is 0
+[09:15:59.102] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.102] [bmv2] [T] [thread 50256] [34.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.102] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Looking up key:
+
+[09:15:59.102] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.102] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.102] [bmv2] [T] [thread 50256] [34.0] [cxt 0] Action ecmp152
+[09:15:59.102] [bmv2] [T] [thread 50256] [34.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.103] [bmv2] [T] [thread 50256] [34.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.103] [bmv2] [T] [thread 50256] [34.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.103] [bmv2] [T] [thread 50256] [34.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.103] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.103] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.103] [bmv2] [T] [thread 50256] [34.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.103] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.103] [bmv2] [D] [thread 50256] [34.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.103] [bmv2] [D] [thread 50260] [34.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Processing packet received on port 4
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Parser 'parser': start
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.163] [bmv2] [T] [thread 50255] [35.0] [cxt 0] Bytes parsed: 14
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Parser 'parser': end
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.163] [bmv2] [T] [thread 50255] [35.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.163] [bmv2] [D] [thread 50255] [35.0] [cxt 0] Egress port is 0
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Looking up key:
+
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] Action ecmp152
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.163] [bmv2] [T] [thread 50256] [35.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.163] [bmv2] [D] [thread 50256] [35.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.163] [bmv2] [D] [thread 50260] [35.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Processing packet received on port 2
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Parser 'parser': start
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.202] [bmv2] [T] [thread 50255] [36.0] [cxt 0] Bytes parsed: 14
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Parser 'parser': end
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.202] [bmv2] [T] [thread 50255] [36.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.202] [bmv2] [D] [thread 50255] [36.0] [cxt 0] Egress port is 0
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Looking up key:
+
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] Action ecmp152
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.202] [bmv2] [T] [thread 50256] [36.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.202] [bmv2] [D] [thread 50256] [36.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.202] [bmv2] [D] [thread 50260] [36.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Processing packet received on port 3
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Parser 'parser': start
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.216] [bmv2] [T] [thread 50255] [37.0] [cxt 0] Bytes parsed: 14
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Parser 'parser': end
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.216] [bmv2] [T] [thread 50255] [37.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.216] [bmv2] [D] [thread 50255] [37.0] [cxt 0] Egress port is 0
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Looking up key:
+
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] Action ecmp152
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.216] [bmv2] [T] [thread 50256] [37.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.216] [bmv2] [D] [thread 50256] [37.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.217] [bmv2] [D] [thread 50260] [37.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Processing packet received on port 2
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Parser 'parser': start
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.223] [bmv2] [T] [thread 50255] [38.0] [cxt 0] Bytes parsed: 14
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Parser 'parser': end
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.223] [bmv2] [T] [thread 50255] [38.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.223] [bmv2] [D] [thread 50255] [38.0] [cxt 0] Egress port is 0
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Looking up key:
+
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] Action ecmp152
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.223] [bmv2] [T] [thread 50256] [38.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.223] [bmv2] [D] [thread 50256] [38.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.224] [bmv2] [D] [thread 50260] [38.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Processing packet received on port 3
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Parser 'parser': start
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.227] [bmv2] [T] [thread 50255] [39.0] [cxt 0] Bytes parsed: 14
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Parser 'parser': end
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.227] [bmv2] [T] [thread 50255] [39.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.227] [bmv2] [D] [thread 50255] [39.0] [cxt 0] Egress port is 0
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Looking up key:
+
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] Action ecmp152
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.227] [bmv2] [T] [thread 50256] [39.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.227] [bmv2] [D] [thread 50256] [39.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.227] [bmv2] [D] [thread 50260] [39.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Processing packet received on port 4
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Parser 'parser': start
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.228] [bmv2] [T] [thread 50255] [40.0] [cxt 0] Bytes parsed: 14
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Parser 'parser': end
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.228] [bmv2] [T] [thread 50255] [40.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.228] [bmv2] [D] [thread 50255] [40.0] [cxt 0] Egress port is 0
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Looking up key:
+
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] Action ecmp152
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.228] [bmv2] [T] [thread 50256] [40.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.228] [bmv2] [D] [thread 50256] [40.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.228] [bmv2] [D] [thread 50260] [40.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Processing packet received on port 4
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Parser 'parser': start
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.228] [bmv2] [T] [thread 50255] [41.0] [cxt 0] Bytes parsed: 14
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Parser 'parser': end
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.228] [bmv2] [T] [thread 50255] [41.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.228] [bmv2] [D] [thread 50255] [41.0] [cxt 0] Egress port is 0
+[09:15:59.228] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.228] [bmv2] [T] [thread 50256] [41.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.228] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Looking up key:
+
+[09:15:59.228] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.228] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.228] [bmv2] [T] [thread 50256] [41.0] [cxt 0] Action ecmp152
+[09:15:59.228] [bmv2] [T] [thread 50256] [41.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.229] [bmv2] [T] [thread 50256] [41.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.229] [bmv2] [T] [thread 50256] [41.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.229] [bmv2] [T] [thread 50256] [41.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.229] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.229] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.229] [bmv2] [T] [thread 50256] [41.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.229] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.229] [bmv2] [D] [thread 50256] [41.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.229] [bmv2] [D] [thread 50260] [41.0] [cxt 0] Transmitting packet of size 70 out of port 0
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Processing packet received on port 4
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Parser 'parser': start
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.236] [bmv2] [T] [thread 50255] [42.0] [cxt 0] Bytes parsed: 14
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Parser 'parser': end
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.236] [bmv2] [T] [thread 50255] [42.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.236] [bmv2] [D] [thread 50255] [42.0] [cxt 0] Egress port is 0
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Looking up key:
+
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] Action ecmp152
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.236] [bmv2] [T] [thread 50256] [42.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.236] [bmv2] [D] [thread 50256] [42.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.236] [bmv2] [D] [thread 50260] [42.0] [cxt 0] Transmitting packet of size 90 out of port 0
+[09:15:59.338] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Processing packet received on port 4
+[09:15:59.338] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Parser 'parser': start
+[09:15:59.338] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.338] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.339] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.339] [bmv2] [T] [thread 50255] [43.0] [cxt 0] Bytes parsed: 14
+[09:15:59.339] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Parser 'parser': end
+[09:15:59.339] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.339] [bmv2] [T] [thread 50255] [43.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.339] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.339] [bmv2] [D] [thread 50255] [43.0] [cxt 0] Egress port is 0
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Looking up key:
+
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] Action ecmp152
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.340] [bmv2] [T] [thread 50256] [43.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.340] [bmv2] [D] [thread 50256] [43.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.341] [bmv2] [D] [thread 50260] [43.0] [cxt 0] Transmitting packet of size 203 out of port 0
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Processing packet received on port 4
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Parser 'parser': start
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.342] [bmv2] [T] [thread 50255] [44.0] [cxt 0] Bytes parsed: 14
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Parser 'parser': end
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.342] [bmv2] [T] [thread 50255] [44.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.342] [bmv2] [D] [thread 50255] [44.0] [cxt 0] Egress port is 0
+[09:15:59.342] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.342] [bmv2] [T] [thread 50256] [44.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.342] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Looking up key:
+
+[09:15:59.342] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.342] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.342] [bmv2] [T] [thread 50256] [44.0] [cxt 0] Action ecmp152
+[09:15:59.342] [bmv2] [T] [thread 50256] [44.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.342] [bmv2] [T] [thread 50256] [44.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.342] [bmv2] [T] [thread 50256] [44.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.342] [bmv2] [T] [thread 50256] [44.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.342] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.343] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.343] [bmv2] [T] [thread 50256] [44.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.343] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.343] [bmv2] [D] [thread 50256] [44.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.343] [bmv2] [D] [thread 50260] [44.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Processing packet received on port 4
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Parser 'parser': start
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Parser 'parser' entering state 'start'
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Extracting header 'ethernet'
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Parser state 'start': key is 86dd
+[09:15:59.353] [bmv2] [T] [thread 50255] [45.0] [cxt 0] Bytes parsed: 14
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Parser 'parser': end
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Pipeline 'ingress': start
+[09:15:59.353] [bmv2] [T] [thread 50255] [45.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(132) Condition "hdr.ipv4.isValid()" (node_2) is false
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Pipeline 'ingress': end
+[09:15:59.353] [bmv2] [D] [thread 50255] [45.0] [cxt 0] Egress port is 0
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Pipeline 'egress': start
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] Applying table 'tbl_ecmp152'
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Looking up key:
+
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Table 'tbl_ecmp152': miss
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Action entry is ecmp152 - 
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] Action ecmp152
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive (bit<32>)standard_metadata.egress_port
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(152) Primitive q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port)
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] Read register 'q_depth_reg' at index 0 read value 0
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] /home/p4/drill/drill_4_4/p4src/ecmp.p4(153) Condition "current_q_len > 0" (node_8) is false
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Pipeline 'egress': end
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Deparser 'deparser': start
+[09:15:59.353] [bmv2] [T] [thread 50256] [45.0] [cxt 0] Skipping checksum 'cksum' update because condition not met
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Deparsing header 'ethernet'
+[09:15:59.353] [bmv2] [D] [thread 50256] [45.0] [cxt 0] Deparser 'deparser': end
+[09:15:59.354] [bmv2] [D] [thread 50260] [45.0] [cxt 0] Transmitting packet of size 211 out of port 0
+[09:16:00.513] [bmv2] [T] [thread 50475] bm_get_config
+[09:16:00.517] [bmv2] [T] [thread 50475] bm_set_default_action
+[09:16:00.517] [bmv2] [D] [thread 50475] Set default entry for table 'MyIngress.ipv4_lpm': MyIngress.drop - 
+[09:16:00.517] [bmv2] [T] [thread 50475] bm_set_default_action
+[09:16:00.517] [bmv2] [D] [thread 50475] Set default entry for table 'MyIngress.ecmp_group_to_nhop': MyIngress.drop - 
+[09:16:00.518] [bmv2] [T] [thread 50475] bm_table_add_entry
+[09:16:00.518] [bmv2] [D] [thread 50475] Entry 0 added to table 'MyIngress.ipv4_lpm'
+[09:16:00.518] [bmv2] [D] [thread 50475] Dumping entry 0
+Match key:
+* hdr.ipv4.dstAddr    : LPM       0a000100/24
+Action entry: MyIngress.set_nhop - 100,1,
+
+[09:16:00.519] [bmv2] [T] [thread 50475] bm_table_add_entry
+[09:16:00.519] [bmv2] [D] [thread 50475] Entry 1 added to table 'MyIngress.ipv4_lpm'
+[09:16:00.519] [bmv2] [D] [thread 50475] Dumping entry 1
+Match key:
+* hdr.ipv4.dstAddr    : LPM       0a000200/24
+Action entry: MyIngress.set_nhop - 200,2,
+
+[09:16:00.519] [bmv2] [T] [thread 50475] bm_table_add_entry
+[09:16:00.519] [bmv2] [D] [thread 50475] Entry 2 added to table 'MyIngress.ipv4_lpm'
+[09:16:00.520] [bmv2] [D] [thread 50475] Dumping entry 2
+Match key:
+* hdr.ipv4.dstAddr    : LPM       0a000300/24
+Action entry: MyIngress.set_nhop - 300,3,
+
+[09:16:00.520] [bmv2] [T] [thread 50475] bm_table_add_entry
+[09:16:00.520] [bmv2] [D] [thread 50475] Entry 3 added to table 'MyIngress.ipv4_lpm'
+[09:16:00.520] [bmv2] [D] [thread 50475] Dumping entry 3
+Match key:
+* hdr.ipv4.dstAddr    : LPM       0a000400/24
+Action entry: MyIngress.set_nhop - 400,4,
+
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
+open: No such file or directory
