@@ -149,14 +149,11 @@ control MyEgress(inout headers hdr,
     
     bit<32> current_q_len;
     apply {
-        q_depth_reg.read(current_q_len,(bit<32>)standard_metadata.egress_port);
-        if(current_q_len > 0){
-            current_q_len = current_q_len - 1;
-            q_depth_reg.write(
-                (bit<32>)standard_metadata.egress_port,  // Index: 使用 Port ID 作為索引
-                (bit<32>)current_q_len    // Value: 寫入當前的 Queue Depth
-            );
-        }
+        current_q_len = (bit<32>)standard_metadata.deq_qdepth;
+        q_depth_reg.write(
+            (bit<32>)standard_metadata.egress_port,  // Index
+            (bit<32>)current_q_len    // Value
+        );
     }
 }
 
