@@ -16,4 +16,4 @@
 ## Note
 1. The packet drop is undetectable when the load is too large for bandwidth. (except iperf and netstat -i)
 No need to test the drop rate in this situation since data center don't act like that. Just meature the drop rate for the loss of link. (count in P4 and calculate in controller)
-2. the information for W-ECMP training (still need P4 register or counter) :group packet loss rate, group link utilization, Maximum jitter and queue_deqth in group, global link utilizationj Standard Deviation.
+2. the information for W-ECMP training (still need P4 register or counter): group packet loss rate, group link utilization, Maximum jitter and queue_deqth in group, global link utilizationj Standard Deviation.
