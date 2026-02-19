@@ -8,6 +8,7 @@
         ["tmp_0", 32, false],
         ["tmp_1", 32, false],
         ["tmp_2", 32, false],
+        ["tmp_3", 32, false],
         ["queue_len", 32, false],
         ["queue_len_0", 32, false],
         ["queue_len_mem_0", 32, false],
@@ -16,8 +17,9 @@
         ["port_num_mem_0", 32, false],
         ["best_port_0", 32, false],
         ["best_queue_0", 32, false],
-        ["tmp_3", 32, false],
         ["tmp_4", 32, false],
+        ["tmp_5", 32, false],
+        ["tmp_6", 32, false],
         ["metadata.ecmp_hash", 14, false],
         ["metadata.ecmp_group_id", 14, false],
         ["_padding_0", 4, false]
@@ -269,7 +271,32 @@
     }
   ],
   "meter_arrays" : [],
-  "counter_arrays" : [],
+  "counter_arrays" : [
+    {
+      "name" : "cnt_ingress",
+      "id" : 0,
+      "source_info" : {
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+        "line" : 11,
+        "column" : 33,
+        "source_fragment" : "cnt_ingress"
+      },
+      "size" : 512,
+      "is_direct" : false
+    },
+    {
+      "name" : "cnt_egress",
+      "id" : 1,
+      "source_info" : {
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+        "line" : 12,
+        "column" : 33,
+        "source_fragment" : "cnt_egress"
+      },
+      "size" : 512,
+      "is_direct" : false
+    }
+  ],
   "register_arrays" : [
     {
       "name" : "q_depth_reg",
@@ -302,7 +329,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-        "line" : 166,
+        "line" : 173,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
       },
@@ -382,7 +409,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 39,
+            "line" : 41,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -404,7 +431,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 39,
+            "line" : 41,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
           }
@@ -472,7 +499,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 54,
+            "line" : 56,
             "column" : 37,
             "source_fragment" : "(bit<32>)num_nhops-1"
           }
@@ -495,7 +522,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 54,
+            "line" : 56,
             "column" : 8,
             "source_fragment" : "random(port_num_1,(bit<32>)0,(bit<32>)num_nhops-1)"
           }
@@ -547,7 +574,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 55,
+            "line" : 57,
             "column" : 37,
             "source_fragment" : "(bit<32>)num_nhops-1"
           }
@@ -570,7 +597,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 55,
+            "line" : 57,
             "column" : 8,
             "source_fragment" : "random(port_num_2,(bit<32>)0,(bit<32>)num_nhops-1)"
           }
@@ -579,7 +606,7 @@
           "op" : "_jump_if_zero",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 57,
+            "line" : 59,
             "column" : 8,
             "source_fragment" : "if"
           },
@@ -618,7 +645,7 @@
           "op" : "_jump_if_zero",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 58,
+            "line" : 60,
             "column" : 12,
             "source_fragment" : "if"
           },
@@ -697,7 +724,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 59,
+            "line" : 61,
             "column" : 16,
             "source_fragment" : "port_num_2 = 0"
           }
@@ -706,7 +733,7 @@
           "op" : "_jump",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 58,
+            "line" : 60,
             "column" : 12,
             "source_fragment" : "if"
           },
@@ -754,7 +781,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 62,
+            "line" : 64,
             "column" : 16,
             "source_fragment" : "port_num_2 = port_num_2 + 1"
           }
@@ -796,7 +823,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 66,
+            "line" : 68,
             "column" : 8,
             "source_fragment" : "port_num_1 = port_num_1 + 2"
           }
@@ -838,7 +865,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 67,
+            "line" : 69,
             "column" : 8,
             "source_fragment" : "port_num_2 = port_num_2 + 2"
           }
@@ -870,7 +897,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 69,
+            "line" : 71,
             "column" : 42,
             "source_fragment" : "(bit<32>)ecmp_group_id"
           }
@@ -893,7 +920,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 69,
+            "line" : 71,
             "column" : 8,
             "source_fragment" : "last_best_p_reg.read(port_num_mem,(bit<32>)ecmp_group_id)"
           }
@@ -902,7 +929,7 @@
           "op" : "_jump_if_zero",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 70,
+            "line" : 72,
             "column" : 8,
             "source_fragment" : "if"
           },
@@ -951,7 +978,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 71,
+            "line" : 73,
             "column" : 12,
             "source_fragment" : "port_num_mem = port_num_1"
           }
@@ -974,7 +1001,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 74,
+            "line" : 76,
             "column" : 8,
             "source_fragment" : "q_depth_reg.read(queue_len_1, port_num_1)"
           }
@@ -997,7 +1024,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 75,
+            "line" : 77,
             "column" : 8,
             "source_fragment" : "q_depth_reg.read(queue_len_2, port_num_2)"
           }
@@ -1020,7 +1047,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 76,
+            "line" : 78,
             "column" : 8,
             "source_fragment" : "q_depth_reg.read(queue_len_mem, port_num_mem)"
           }
@@ -1029,7 +1056,7 @@
           "op" : "_jump_if_zero",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 78,
+            "line" : 80,
             "column" : 8,
             "source_fragment" : "if"
           },
@@ -1078,7 +1105,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 79,
+            "line" : 81,
             "column" : 12,
             "source_fragment" : "best_port = port_num_2"
           }
@@ -1097,7 +1124,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 80,
+            "line" : 82,
             "column" : 12,
             "source_fragment" : "best_queue = queue_len_2"
           }
@@ -1106,7 +1133,7 @@
           "op" : "_jump",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 78,
+            "line" : 80,
             "column" : 8,
             "source_fragment" : "if"
           },
@@ -1131,7 +1158,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 83,
+            "line" : 85,
             "column" : 12,
             "source_fragment" : "best_port = port_num_1"
           }
@@ -1150,7 +1177,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 84,
+            "line" : 86,
             "column" : 12,
             "source_fragment" : "best_queue = queue_len_1"
           }
@@ -1159,7 +1186,7 @@
           "op" : "_jump_if_zero",
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 86,
+            "line" : 88,
             "column" : 8,
             "source_fragment" : "if"
           },
@@ -1208,7 +1235,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 87,
+            "line" : 89,
             "column" : 12,
             "source_fragment" : "best_port = port_num_mem"
           }
@@ -1227,7 +1254,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 88,
+            "line" : 90,
             "column" : 12,
             "source_fragment" : "best_queue = queue_len_mem"
           }
@@ -1246,7 +1273,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 91,
+            "line" : 93,
             "column" : 8,
             "source_fragment" : "meta.ecmp_group_id = ecmp_group_id"
           }
@@ -1288,7 +1315,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 92,
+            "line" : 94,
             "column" : 8,
             "source_fragment" : "meta.ecmp_hash = (bit<14>)best_port"
           }
@@ -1330,7 +1357,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 94,
+            "line" : 96,
             "column" : 8,
             "source_fragment" : "best_queue = best_queue + 1"
           }
@@ -1353,7 +1380,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 95,
+            "line" : 97,
             "column" : 8,
             "source_fragment" : "q_depth_reg.write((bit<32>)best_port,best_queue)"
           }
@@ -1385,7 +1412,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 96,
+            "line" : 98,
             "column" : 30,
             "source_fragment" : "(bit<32>)ecmp_group_id"
           }
@@ -1408,7 +1435,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 96,
+            "line" : 98,
             "column" : 8,
             "source_fragment" : "last_best_p_reg.write((bit<32>)ecmp_group_id,best_queue)"
           }
@@ -1443,7 +1470,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 100,
+            "line" : 102,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.srcAddr = hdr.ethernet.dstAddr"
           }
@@ -1462,7 +1489,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 101,
+            "line" : 103,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.dstAddr = dstAddr"
           }
@@ -1481,7 +1508,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 102,
+            "line" : 104,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = port"
           }
@@ -1523,7 +1550,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 103,
+            "line" : 105,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl - 1"
           }
@@ -1558,7 +1585,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 100,
+            "line" : 102,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.srcAddr = hdr.ethernet.dstAddr"
           }
@@ -1577,7 +1604,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 101,
+            "line" : 103,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.dstAddr = dstAddr"
           }
@@ -1596,7 +1623,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 102,
+            "line" : 104,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = port"
           }
@@ -1638,7 +1665,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 103,
+            "line" : 105,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl - 1"
           }
@@ -1646,7 +1673,7 @@
       ]
     },
     {
-      "name" : "ecmp153",
+      "name" : "ecmp134",
       "id" : 6,
       "runtime_data" : [],
       "primitives" : [
@@ -1656,6 +1683,64 @@
             {
               "type" : "field",
               "value" : ["scalars", "tmp_3"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["standard_metadata", "ingress_port"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 134,
+            "column" : 26,
+            "source_fragment" : "(bit<32>)standard_metadata.ingress_port"
+          }
+        },
+        {
+          "op" : "count",
+          "parameters" : [
+            {
+              "type" : "counter_array",
+              "value" : "cnt_ingress"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_3"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 134,
+            "column" : 8,
+            "source_fragment" : "cnt_ingress.count((bit<32>)standard_metadata.ingress_port)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "ecmp162",
+      "id" : 7,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_4"]
             },
             {
               "type" : "expression",
@@ -1677,7 +1762,65 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 154,
+            "line" : 162,
+            "column" : 29,
+            "source_fragment" : "(bit<32>)standard_metadata.egress_port"
+          }
+        },
+        {
+          "op" : "count",
+          "parameters" : [
+            {
+              "type" : "counter_array",
+              "value" : "cnt_egress"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_4"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 162,
+            "column" : 12,
+            "source_fragment" : "cnt_egress.count((bit<32>)standard_metadata.egress_port)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "ecmp157",
+      "id" : 8,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_5"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["standard_metadata", "egress_port"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 158,
             "column" : 12,
             "source_fragment" : "(bit<32>)standard_metadata.egress_port"
           }
@@ -1687,7 +1830,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "tmp_4"]
+              "value" : ["scalars", "tmp_6"]
             },
             {
               "type" : "expression",
@@ -1709,7 +1852,7 @@
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 155,
+            "line" : 159,
             "column" : 21,
             "source_fragment" : "current_q_len"
           }
@@ -1723,16 +1866,16 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "tmp_3"]
+              "value" : ["scalars", "tmp_5"]
             },
             {
               "type" : "field",
-              "value" : ["scalars", "tmp_4"]
+              "value" : ["scalars", "tmp_6"]
             }
           ],
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 153,
+            "line" : 157,
             "column" : 8,
             "source_fragment" : "q_depth_reg.write( ..."
           }
@@ -1746,18 +1889,47 @@
       "id" : 0,
       "source_info" : {
         "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-        "line" : 23,
+        "line" : 25,
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
-      "init_table" : "node_2",
+      "init_table" : "tbl_ecmp134",
       "tables" : [
         {
-          "name" : "MyIngress.ipv4_lpm",
+          "name" : "tbl_ecmp134",
           "id" : 0,
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 118,
+            "line" : 134,
+            "column" : 8,
+            "source_fragment" : "cnt_ingress.count((bit<32>)standard_metadata.ingress_port)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [6],
+          "actions" : ["ecmp134"],
+          "base_default_next" : "node_3",
+          "next_tables" : {
+            "ecmp134" : "node_3"
+          },
+          "default_entry" : {
+            "action_id" : 6,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "MyIngress.ipv4_lpm",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 120,
             "column" : 10,
             "source_fragment" : "ipv4_lpm"
           },
@@ -1792,10 +1964,10 @@
         },
         {
           "name" : "MyIngress.ecmp_group_to_nhop",
-          "id" : 1,
+          "id" : 2,
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 106,
+            "line" : 108,
             "column" : 10,
             "source_fragment" : "ecmp_group_to_nhop"
           },
@@ -1838,11 +2010,11 @@
       "action_profiles" : [],
       "conditionals" : [
         {
-          "name" : "node_2",
+          "name" : "node_3",
           "id" : 0,
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 132,
+            "line" : 136,
             "column" : 12,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -1867,18 +2039,18 @@
       "id" : 1,
       "source_info" : {
         "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-        "line" : 146,
+        "line" : 150,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
-      "init_table" : "tbl_ecmp153",
+      "init_table" : "tbl_ecmp157",
       "tables" : [
         {
-          "name" : "tbl_ecmp153",
-          "id" : 2,
+          "name" : "tbl_ecmp157",
+          "id" : 3,
           "source_info" : {
             "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-            "line" : 153,
+            "line" : 157,
             "column" : 8,
             "source_fragment" : "q_depth_reg.write( ..."
           },
@@ -1889,14 +2061,43 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [6],
-          "actions" : ["ecmp153"],
-          "base_default_next" : null,
+          "action_ids" : [8],
+          "actions" : ["ecmp157"],
+          "base_default_next" : "node_9",
           "next_tables" : {
-            "ecmp153" : null
+            "ecmp157" : "node_9"
           },
           "default_entry" : {
-            "action_id" : 6,
+            "action_id" : 8,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_ecmp162",
+          "id" : 4,
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 162,
+            "column" : 12,
+            "source_fragment" : "cnt_egress.count((bit<32>)standard_metadata.egress_port)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [7],
+          "actions" : ["ecmp162"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "ecmp162" : null
+          },
+          "default_entry" : {
+            "action_id" : 7,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -1904,7 +2105,44 @@
         }
       ],
       "action_profiles" : [],
-      "conditionals" : []
+      "conditionals" : [
+        {
+          "name" : "node_9",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
+            "line" : 161,
+            "column" : 11,
+            "source_fragment" : "(bit<32>)standard_metadata.egress_port < 512"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "<",
+              "left" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["standard_metadata", "egress_port"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x00000200"
+              }
+            }
+          },
+          "false_next" : null,
+          "true_next" : "tbl_ecmp162"
+        }
+      ]
     }
   ],
   "checksums" : [
@@ -1913,7 +2151,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
-        "line" : 166,
+        "line" : 173,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
       },

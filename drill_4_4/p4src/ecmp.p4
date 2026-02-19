@@ -8,6 +8,8 @@
 
 register<bit<32>>(512) q_depth_reg;
 register<bit<32>>(512) last_best_p_reg;
+counter(512,CounterType.packets) cnt_ingress;
+counter(512,CounterType.packets) cnt_egress;
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
@@ -129,6 +131,8 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
+        cnt_ingress.count((bit<32>)standard_metadata.ingress_port);
+        
         if (hdr.ipv4.isValid()){
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
@@ -154,6 +158,9 @@ control MyEgress(inout headers hdr,
             (bit<32>)standard_metadata.egress_port,  // Index
             (bit<32>)current_q_len    // Value
         );
+        if((bit<32>)standard_metadata.egress_port < 512){
+            cnt_egress.count((bit<32>)standard_metadata.egress_port);
+        }
     }
 }
 
