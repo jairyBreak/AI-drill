@@ -56,12 +56,10 @@ for src in leaf_switches:
         except nx.NetworkXNoPath:
             pass
 
-# ==========================================
-# 3. 找出對稱路徑群組，並計算總權重
-# ==========================================
+# find synnetric path and calculate its weight from bandwidth
 def find_symmetric_components(src_leaf, dst_leaf):
-    # Dictionary 結構: 
-    # Key: Signature (tuple) : the length of tuple is the link from src to dst
+    # Dict: components 
+    # Key: signature (tuple) : the length of tuple is the link from src to dst
     # the element in the tuple is another tuple like : 'l*->l*_CF:(float)'. it mean all the path contain this link and its CF  
     # Value: {'paths': [list of path (a list)], 'weight': sum of the bandwidth of bandwidth of bottleneck link }
     components = {} 
