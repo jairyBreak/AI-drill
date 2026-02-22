@@ -9,8 +9,8 @@
     "auto_gw_arp": true,
     "links": [
       ["h1", "l1"], ["h2", "l2"], ["h3", "l3"], ["h4", "l4"],
-      ["l1", "s1",{"bw": 0.5, "max_queue_size": 256}], ["l1", "s2",{"bw": 5, "max_queue_size": 256}],["l1", "s3",{"bw": 0.5, "max_queue_size": 256}], ["l1", "s4",{"bw": 0.5, "max_queue_size": 256}], 
-      ["l2", "s1",{"bw": 2.5, "max_queue_size": 256}], ["l2", "s2",{"bw": 5, "max_queue_size": 256}],["l2", "s3",{"bw": 0.5, "max_queue_size": 256}], ["l2", "s4",{"bw": 0.5, "max_queue_size": 256}],
+      ["l1", "s1",{"bw": 0.5, "max_queue_size": 256}], ["l1", "s2",{"bw": 0.5, "max_queue_size": 256}],["l1", "s3",{"bw": 1, "max_queue_size": 256}], ["l1", "s4",{"bw": 1, "max_queue_size": 256}], 
+      ["l2", "s1",{"bw": 0.5, "max_queue_size": 256}], ["l2", "s2",{"bw": 0.5, "max_queue_size": 256}],["l2", "s3",{"bw": 1, "max_queue_size": 256}], ["l2", "s4",{"bw": 1, "max_queue_size": 256}],
       ["l3", "s1",{"bw": 0.5, "max_queue_size": 256}],["l3", "s2",{"bw": 0.5, "max_queue_size": 256}],["l3", "s3",{"bw": 0.5, "max_queue_size": 256}], ["l3", "s4",{"bw": 0.5, "max_queue_size": 256}], 
       ["l4", "s1",{"bw": 0.5, "max_queue_size": 256}], ["l4", "s2",{"bw": 0.5, "max_queue_size": 256}],["l4", "s3",{"bw": 0.5, "max_queue_size": 256}], ["l4", "s4",{"bw": 0.5, "max_queue_size": 256}]
     ],

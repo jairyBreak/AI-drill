@@ -36,23 +36,32 @@ control MyIngress(inout headers hdr,
 
     bit<32> best_port;
     bit<32> best_queue;
-        
+    action set_w_ecmp(){}
     action drop() {
         mark_to_drop(standard_metadata);
     }
+    action assign_component(bit<14> comp_id){
+        meta.ecmp_group_id = comp_id;
+    }
+    action_selector(HashAlgorithm.crc16, 32, 1024) w_ecmp_selector;
 
-    action ecmp_group(bit<14> ecmp_group_id, bit<16> num_nhops){
-        /*
-        hash(meta.ecmp_hash,
-	    HashAlgorithm.crc16,
-	    (bit<1>)0,
-	    { hdr.ipv4.srcAddr,
-	      hdr.ipv4.dstAddr,
-          hdr.tcp.srcPort,
-          hdr.tcp.dstPort,
-          hdr.ipv4.protocol},
-	    num_nhops);
-        */
+    table w_ecmp_table {
+        key = {
+            hdr.ipv4.dstAddr : exact; 
+            hdr.ipv4.srcAddr : selector;
+            hdr.ipv4.protocol : selector;
+            hdr.tcp.srcPort : selector;
+            hdr.tcp.dstPort : selector;
+        }
+        actions = {
+            assign_component;
+            drop;
+        }
+        implementation = w_ecmp_selector;
+        size = 1024;
+    }
+
+    action run_drill(bit<16> num_nhops, bit<32> base_port){
         random(port_num_1,(bit<32>)0,(bit<32>)num_nhops-1);
         random(port_num_2,(bit<32>)0,(bit<32>)num_nhops-1);
 
@@ -65,11 +74,11 @@ control MyIngress(inout headers hdr,
             }
         }
 
-        port_num_1 = port_num_1 + 2;
-        port_num_2 = port_num_2 + 2;
+        port_num_1 = port_num_1 + base_port;
+        port_num_2 = port_num_2 + base_port;
         
-        last_best_p_reg.read(port_num_mem,(bit<32>)ecmp_group_id);
-        if(port_num_mem < 2){
+        last_best_p_reg.read(port_num_mem,(bit<32>)meta.ecmp_group_id);
+        if(port_num_mem < base_port){
             port_num_mem = port_num_1;
         }
 
@@ -90,12 +99,11 @@ control MyIngress(inout headers hdr,
             best_queue = queue_len_mem;
         }
 
-        meta.ecmp_group_id = ecmp_group_id;
         meta.ecmp_hash = (bit<14>)best_port;
 
         best_queue = best_queue + 1;
         q_depth_reg.write((bit<32>)best_port,best_queue);
-        last_best_p_reg.write((bit<32>)ecmp_group_id,best_queue);
+        last_best_p_reg.write((bit<32>)meta.ecmp_group_id,best_queue);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
@@ -103,6 +111,18 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         standard_metadata.egress_spec = port;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
+    // 新增一個 Table，用來根據不同的 Group ID，給予不同的 DRILL 參數
+    table drill_params_table {
+        key = {
+            meta.ecmp_group_id: exact;
+        }
+        actions = {
+            run_drill;
+            drop;
+        }
+        size = 1024;
     }
 
     table ecmp_group_to_nhop {
@@ -123,20 +143,31 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             set_nhop;
-            ecmp_group;
+            set_w_ecmp;
             drop;
         }
         size = 1024;
         default_action = drop;
     }
-
-    apply {
+apply {
         cnt_ingress.count((bit<32>)standard_metadata.ingress_port);
-        
-        if (hdr.ipv4.isValid()){
-            switch (ipv4_lpm.apply().action_run){
-                ecmp_group: {
-                    ecmp_group_to_nhop.apply();
+        if (hdr.ipv4.isValid()) {
+            // 第一步：永遠先查 LPM 路由表
+            switch (ipv4_lpm.apply().action_run) {
+                // 情況 A：LPM 判定這條路由需要多路徑負載平衡
+                set_w_ecmp: {
+                    // 進入階段一：Selector 依 5-tuple 抽出 Component ID
+                    if (w_ecmp_table.apply().hit) {
+                        // 進入階段二：依據 Component ID 給予對應的 DRILL 參數
+                        if (drill_params_table.apply().hit) {
+                            // 最終階段：將 DRILL 算出的 best_port 轉換為實體 Port 與 MAC
+                            ecmp_group_to_nhop.apply();
+                        }
+                    }
+                }
+                // 情況 B：傳統單一路由 (例如直連的 Host)，直接放行
+                set_nhop: {
+                    // 已經在 set_nhop 寫好 egress_spec，不需後續處理
                 }
             }
         }
