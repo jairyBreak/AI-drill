@@ -36,6 +36,7 @@ control MyIngress(inout headers hdr,
 
     bit<32> best_port;
     bit<32> best_queue;
+
     action set_w_ecmp(){}
     action drop() {
         mark_to_drop(standard_metadata);
@@ -151,6 +152,19 @@ control MyIngress(inout headers hdr,
     }
 apply {
         cnt_ingress.count((bit<32>)standard_metadata.ingress_port);
+        if(hdr.tcp.isValid()){
+            meta.l4_dstPort = hdr.tcp.dstPort;
+            meta.l4_srcPort = hdr.tcp.srcPort;
+        }
+        else if(hdr.tcp.isValid()){
+            meta.l4_dstPort = hdr.udp.dstPort;
+            meta.l4_srcPort = hdr.udp.srcPort;
+        }
+        else{
+            meta.l4_dstPort = 0;
+            meta.l4_srcPort = 0;
+        }
+
         if (hdr.ipv4.isValid()) {
             // 第一步：永遠先查 LPM 路由表
             switch (ipv4_lpm.apply().action_run) {

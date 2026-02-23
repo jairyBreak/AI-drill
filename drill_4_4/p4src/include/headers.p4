@@ -51,14 +51,24 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
+header udp_t{
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> len;
+    bit<16> checksum;
+}
+
 struct metadata {
     bit<14> ecmp_hash;
     bit<14> ecmp_group_id;
+    bit<16> l4_dstPort;
+    bit<16> l4_srcPort;
 }
 
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
     tcp_t        tcp;
+    udp_t        udp;
 }
 
