@@ -6,10 +6,19 @@
 #include "include/headers.p4"
 #include "include/parsers.p4"
 
+//for drill
 register<bit<32>>(512) q_depth_reg;
 register<bit<32>>(512) last_best_p_reg;
+
+//for ML (maybe)
+register<bit<32>>(256) port_jitter_reg;
+register<bit<48>>(256) last_timestamp_reg;
+
 counter(512,CounterType.packets) cnt_ingress;
 counter(512,CounterType.packets) cnt_egress;
+counter(256, CounterType.packets) port_drop_counter;
+counter(256, CounterType.bytes) port_bytes_counter; 
+
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
