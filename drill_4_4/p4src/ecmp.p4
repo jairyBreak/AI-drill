@@ -60,8 +60,8 @@ control MyIngress(inout headers hdr,
             hdr.ipv4.dstAddr : exact; 
             hdr.ipv4.srcAddr : selector;
             hdr.ipv4.protocol : selector;
-            hdr.tcp.srcPort : selector;
-            hdr.tcp.dstPort : selector;
+            meta.l4_dstPort : selector;
+            meta.l4_srcPort : selector;
         }
         actions = {
             assign_component;
@@ -175,22 +175,19 @@ apply {
         }
 
         if (hdr.ipv4.isValid()) {
-            // 第一步：永遠先查 LPM 路由表
             switch (ipv4_lpm.apply().action_run) {
-                // 情況 A：LPM 判定這條路由需要多路徑負載平衡
                 set_w_ecmp: {
-                    // 進入階段一：Selector 依 5-tuple 抽出 Component ID
+                    // Selector 依 5-tuple 抽出 Component ID
                     if (w_ecmp_table.apply().hit) {
-                        // 進入階段二：依據 Component ID 給予對應的 DRILL 參數
+                        //  Component ID 給予對應的 DRILL 參數
                         if (drill_params_table.apply().hit) {
-                            // 最終階段：將 DRILL 算出的 best_port 轉換為實體 Port 與 MAC
+                            // 將 DRILL 算出的 best_port 轉換為實體 Port 與 MAC
                             ecmp_group_to_nhop.apply();
                         }
                     }
                 }
-                // 情況 B：傳統單一路由 (例如直連的 Host)，直接放行
                 set_nhop: {
-                    // 已經在 set_nhop 寫好 egress_spec，不需後續處理
+                    // 已經在 set_nhop 寫好 egress_specｓ
                 }
             }
         }
