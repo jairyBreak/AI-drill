@@ -31,6 +31,12 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
+header int_header_t {
+    bit<32> path_queue_depth;
+    bit<16> src_id;
+    bit<16> next_proto;
+}
+
 header tcp_t{
     bit<16> srcPort;
     bit<16> dstPort;
@@ -67,6 +73,7 @@ struct metadata {
 
 struct headers {
     ethernet_t   ethernet;
+    int_header_t int_hdr;
     ipv4_t       ipv4;
     tcp_t        tcp;
     udp_t        udp;

@@ -14,9 +14,17 @@ parser MyParser(packet_in packet,
     }
 
     state parse_ethernet {
-
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType){
+            TYPE_IPV4: parse_ipv4;
+            0x9999: parse_int;
+            default: accept;
+        }
+    }
+
+    state parse_int {
+        packet.extract(hdr.int_hdr);
+        transition select(hdr.int_hdr.next_proto){
             TYPE_IPV4: parse_ipv4;
             default: accept;
         }
@@ -37,7 +45,7 @@ parser MyParser(packet_in packet,
     }
 
     state parse_udp{
-        packet.extract(hdr.tcp);
+        packet.extract(hdr.udp);
         transition accept;
     }
 }
@@ -51,6 +59,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
 
         //parsed headers have to be added again into the packet.
         packet.emit(hdr.ethernet);
+        packet.emit(hdr.int_hdr);
         packet.emit(hdr.ipv4);
 
         //Only emited if valid

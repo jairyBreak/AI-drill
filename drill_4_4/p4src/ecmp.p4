@@ -13,6 +13,7 @@ register<bit<32>>(512) last_best_p_reg;
 //for ML (maybe)
 register<bit<32>>(256) port_jitter_reg;
 register<bit<48>>(256) last_timestamp_reg;
+register<bit<32>>(1024) path_max_queue_depth_reg;
 
 counter(512,CounterType.packets) cnt_ingress;
 counter(512,CounterType.packets) cnt_egress;
@@ -165,7 +166,7 @@ apply {
             meta.l4_dstPort = hdr.tcp.dstPort;
             meta.l4_srcPort = hdr.tcp.srcPort;
         }
-        else if(hdr.tcp.isValid()){
+        else if(hdr.udp.isValid()){
             meta.l4_dstPort = hdr.udp.dstPort;
             meta.l4_srcPort = hdr.udp.srcPort;
         }
@@ -189,6 +190,31 @@ apply {
                 set_nhop: {
                     // 已經在 set_nhop 寫好 egress_specｓ
                 }
+            }
+        }
+
+        bit<32> local_q_depth = 0;
+        if(standard_metadata.egress_spec < 255){
+            q_depth_reg.read(local_q_depth,(bit<32>)standard_metadata.egress_spec);
+        }
+
+        if(hdr.int_hdr.isValid()){
+            if(local_q_depth > hdr.int_hdr.path_queue_depth){
+                hdr.int_hdr.path_queue_depth = local_q_depth;
+            }
+            if(standard_metadata.egress_spec == 1){
+                path_max_queue_depth_reg.write((bit<32>)hdr.int_hdr.src_id,hdr.int_hdr.path_queue_depth);
+                hdr.ethernet.etherType = hdr.int_hdr.next_proto;
+                hdr.int_hdr.setInvalid();
+            }
+        }
+        else{
+            if(hdr.ipv4.isValid() && standard_metadata.ingress_port == 1){
+                hdr.int_hdr.setValid();
+                hdr.int_hdr.path_queue_depth = local_q_depth;
+                hdr.int_hdr.src_id = (bit<16>)hdr.ipv4.srcAddr[7:0];
+                hdr.int_hdr.next_proto = hdr.ethernet.etherType;
+                hdr.ethernet.etherType = 0x9999;
             }
         }
     }
