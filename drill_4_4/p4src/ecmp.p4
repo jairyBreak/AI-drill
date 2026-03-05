@@ -9,6 +9,7 @@
 //for drill
 register<bit<32>>(512) q_depth_reg;
 register<bit<32>>(512) last_best_p_reg;
+register<bit<32>>(1024) port_map_reg;
 
 //for ML (maybe)
 register<bit<32>>(256) port_jitter_reg;
@@ -72,24 +73,33 @@ control MyIngress(inout headers hdr,
         size = 1024;
     }
 
-    action run_drill(bit<16> num_nhops, bit<32> base_port){
-        random(port_num_1,(bit<32>)0,(bit<32>)num_nhops-1);
-        random(port_num_2,(bit<32>)0,(bit<32>)num_nhops-1);
 
-        if(port_num_1 == port_num_2){
-            if(port_num_2 == (bit<32>)(num_nhops-1)){
-                port_num_2 = 0;
+
+    action run_drill(bit<16> num_nhops){
+        
+        bit<32> logical_idx1;
+        bit<32> logical_idx2;
+
+        random(logical_idx1,(bit<32>)0,(bit<32>)num_nhops-1);
+        random(logical_idx2,(bit<32>)0,(bit<32>)num_nhops-1);
+
+        if(logical_idx1 == logical_idx2){
+            if(logical_idx2 == (bit<32>)(num_nhops-1)){
+                logical_idx2 = 0;
             }
             else{
-                port_num_2 = port_num_2 + 1;
+                logical_idx2 = logical_idx2 + 1;
             }
         }
 
-        port_num_1 = port_num_1 + base_port;
-        port_num_2 = port_num_2 + base_port;
-        
+        bit<32> map_addr_1 = (bit<32>)meta.ecmp_group_id * 16 + logical_idx1;
+        bit<32> map_addr_2 = (bit<32>)meta.ecmp_group_id * 16 + logical_idx2;
+
+        port_map_reg.read(port_num_1, map_addr_1);
+        port_map_reg.read(port_num_2, map_addr_2);
         last_best_p_reg.read(port_num_mem,(bit<32>)meta.ecmp_group_id);
-        if(port_num_mem < base_port){
+
+        if(port_num_mem == 0){
             port_num_mem = port_num_1;
         }
 
@@ -114,7 +124,7 @@ control MyIngress(inout headers hdr,
 
         best_queue = best_queue + 1;
         q_depth_reg.write((bit<32>)best_port,best_queue);
-        last_best_p_reg.write((bit<32>)meta.ecmp_group_id,best_queue);
+        last_best_p_reg.write((bit<32>)meta.ecmp_group_id,best_port);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {

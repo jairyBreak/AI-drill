@@ -4,6 +4,7 @@ import json
 import subprocess
 import math
 import logging
+import networkx as nx
 from functools import reduce
 from typing import Dict, List, Tuple, Any, Set, Optional
 
@@ -28,7 +29,6 @@ class TopologyAnalyzer:
         self.topo_data = p4app_data.get('topology', {})
         self.topo_json = topo_json_obj
         
-        import networkx as nx
         self.G = nx.DiGraph()
         self.Q = nx.DiGraph()
         self.leaf_switches: Set[str] = set()
@@ -183,9 +183,16 @@ class LeafController:
         # 1. 緩衝 P4 底層轉發表指令
         for rule in hardware_rules:
             c_id = rule['comp_id']
-            self.buffer_cli_cmd(f"table_add drill_params_table run_drill {c_id} => {rule['num_nhops']} {rule['base_port']}")
-            
-            for port, mac in rule['ports_and_macs']:
+            self.buffer_cli_cmd(f"table_add drill_params_table run_drill {c_id} => {rule['num_nhops']}")
+            for logical_idx, (port, mac) in enumerate(rule['ports_and_macs']):
+                # 計算 Mapping Address: (c_id * 16) + logical_idx
+                map_address = c_id * 16 + logical_idx
+                # 透過 Thrift 寫入 Register
+                try:
+                    self.api.register_write("port_map_reg", map_address, port)
+                except Exception as e:
+                    print(f"      [錯誤] 無法寫入 port map register: {e}")
+                # 寫入下一跳 MAC 轉發表 (保持不變)
                 self.buffer_cli_cmd(f"table_add ecmp_group_to_nhop set_nhop {c_id} {port} => {mac} {port}")
 
         # 2. 透過 Thrift API 下發 W-ECMP Selector 機率權重 (Thrift 本身是快速的 RPC，維持直接呼叫)
@@ -225,7 +232,7 @@ if __name__ == "__main__":
     print("===========================================\n")
 
     for src_leaf in analyzer.leaf_switches:
-        print(f"[{src_leaf}] 計算轉發規則...")
+        print(f"[{src_leaf}] 計算轉發規則")
         
         for dst_leaf in analyzer.leaf_switches:
             if src_leaf == dst_leaf:
@@ -238,8 +245,8 @@ if __name__ == "__main__":
             controllers[src_leaf].set_w_ecmp_weights(target_ip, weights_list, hardware_rules)
             
         # 等該 Leaf 所有目標 IP 的規則都計算完畢後，一次性發送 1 個子行程寫入所有指令
-        print(f"[{src_leaf}] 批次寫入硬體規則...")
+        print(f"[{src_leaf}] 批次寫入硬體規則")
         controllers[src_leaf].commit_cli_cmds()
         print("-" * 50)
         
-    print("\n[系統] 全網拓樸批次配置完畢！")
+    print("\n全網拓樸批次配置完畢！")
