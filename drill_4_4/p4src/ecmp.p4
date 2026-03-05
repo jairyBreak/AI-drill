@@ -115,7 +115,7 @@ control MyIngress(inout headers hdr,
             best_port = port_num_1;
             best_queue = queue_len_1;
         }
-        if(best_queue >= queue_len_mem) {
+        if(best_queue > queue_len_mem) {
             best_port = port_num_mem;
             best_queue = queue_len_mem;
         }

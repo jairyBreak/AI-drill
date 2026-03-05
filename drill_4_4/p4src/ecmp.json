@@ -1581,7 +1581,7 @@
                   "right" : {
                     "type" : "expression",
                     "value" : {
-                      "op" : ">=",
+                      "op" : ">",
                       "left" : {
                         "type" : "field",
                         "value" : ["scalars", "best_queue_0"]
