@@ -204,6 +204,7 @@ apply {
         }
 
         bit<32> local_q_depth = 0;
+        bit<32> src_add = 0;
         if(standard_metadata.egress_spec < 255){
             q_depth_reg.read(local_q_depth,(bit<32>)standard_metadata.egress_spec);
         }
@@ -213,7 +214,8 @@ apply {
                 hdr.int_hdr.path_queue_depth = local_q_depth;
             }
             if(standard_metadata.egress_spec == 1){
-                path_max_queue_depth_reg.write((bit<32>)hdr.int_hdr.src_id,hdr.int_hdr.path_queue_depth);
+                src_add = (bit<32>)hdr.int_hdr.src_id * 16 + (bit<32>)standard_metadata.ingress_port;
+                path_max_queue_depth_reg.write((bit<32>)src_add, hdr.int_hdr.path_queue_depth);
                 hdr.ethernet.etherType = hdr.int_hdr.next_proto;
                 hdr.int_hdr.setInvalid();
             }

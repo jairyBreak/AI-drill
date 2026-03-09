@@ -4,7 +4,7 @@ sys.path.append('/home/p4/p4-utils')
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 
 class TelemetryCollector:
-    def __init__(self, switch_name, thrift_port, num_ports=5):
+    def __init__(self, switch_name, thrift_port, num_ports):
         self.switch_name = switch_name
         self.api = SimpleSwitchThriftAPI(thrift_port)
         self.num_ports = num_ports # 假設你的 Leaf Switch 有 5 個 Port
@@ -53,10 +53,8 @@ class TelemetryCollector:
         
         # 3. 統整 ML 特徵
         max_q_depth = max(queue_depths)
-        
         print(f"  => [ML Feature] Maximum Queue Depth: {max_q_depth}")
         print("-" * 35)
-        
         return {
             "max_queue_depth": max_q_depth,
             "utilizations": utilizations
@@ -64,8 +62,7 @@ class TelemetryCollector:
 
 if __name__ == "__main__":
     # 測試連線至 l1 (請確認 Thrift Port 是否為 9090)
-    collector = TelemetryCollector("l1", 9090, num_ports=5)
-    
+    collector = TelemetryCollector("l1", 9090, num_ports=6)
     try:
         while True:
             # 每 1 秒輪詢一次 (你的預測區間是 1 秒)
