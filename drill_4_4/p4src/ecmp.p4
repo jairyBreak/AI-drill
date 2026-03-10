@@ -12,8 +12,6 @@ register<bit<32>>(512) last_best_p_reg;
 register<bit<32>>(1024) port_map_reg;
 
 //for ML (maybe)
-register<bit<32>>(256) port_jitter_reg;
-register<bit<48>>(256) last_timestamp_reg;
 register<bit<32>>(1024) path_max_queue_depth_reg;
 
 counter(512,CounterType.packets) cnt_ingress;
@@ -215,7 +213,11 @@ apply {
             }
             if(standard_metadata.egress_spec == 1){
                 src_add = (bit<32>)hdr.int_hdr.src_id * 16 + (bit<32>)standard_metadata.ingress_port;
-                path_max_queue_depth_reg.write((bit<32>)src_add, hdr.int_hdr.path_queue_depth);
+                bit<32> current_depth = 0;
+                path_max_queue_depth_reg.read(current_depth, (bit<32>)src_add);
+                if(hdr.int_hdr.path_queue_depth > current_depth){                  
+                    path_max_queue_depth_reg.write((bit<32>)src_add, hdr.int_hdr.path_queue_depth);
+                }
                 hdr.ethernet.etherType = hdr.int_hdr.next_proto;
                 hdr.int_hdr.setInvalid();
             }
