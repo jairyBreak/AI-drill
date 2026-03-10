@@ -169,7 +169,10 @@ control MyIngress(inout headers hdr,
         default_action = drop;
     }
 apply {
+        port_bytes_counter.count((bit<32>)standard_metadata.ingress_port);
+
         cnt_ingress.count((bit<32>)standard_metadata.ingress_port);
+        
         if(hdr.tcp.isValid()){
             meta.l4_dstPort = hdr.tcp.dstPort;
             meta.l4_srcPort = hdr.tcp.srcPort;
