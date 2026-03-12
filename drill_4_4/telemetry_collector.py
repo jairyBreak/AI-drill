@@ -42,11 +42,14 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
 
     logging.info(f"開始收集 {target_leaf} 的 INT 佇列特徵，持續 {test_duration_sec} 秒...")
     
+    prev_time = time.time()
+    prev_bytes = {port: 0 for port in spine_ports}
     # 準備 CSV 標頭
     headers = ["Timestamp"]
     for src in target_src_ids:
         for port in spine_ports:
             headers.append(f"src{src}_port{port}_qdepth")
+            headers.append(f"src{src}_port{port}_mbps")
 
     with open(output_csv, 'w', newline='') as f:
         writer = csv.writer(f)
@@ -56,6 +59,7 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
         # 取樣頻率：每 0.1 秒抓取一次 (10Hz)
         while time.time() - start_time < test_duration_sec:
             current_timestamp = time.time()
+            time_delta = current_timestamp - prev_time
             row_data = [current_timestamp]
 
             for src in target_src_ids:
@@ -73,8 +77,25 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
                         
                     except Exception:
                         row_data.append(0)
+                    try:
+                        current_obj = api.counter_read('port_bytes_counter', port)
+                        current_bytes = current_obj[0]
+                        bytes_delta = current_bytes - prev_bytes[port]
+                        
+                        # 防止時間差極小導致的除以零錯誤，並計算 Mbps
+                        if time_delta > 0:
+                            throughput_mbps = (bytes_delta * 8) / (time_delta * 1_000_000)
+                        else:
+                            throughput_mbps = 0.0
+                            
+                        # 取小數點後兩位，保持資料集乾淨
+                        row_data.append(round(throughput_mbps, 2))
+                        prev_bytes[port] = current_bytes
+                    except Exception:
+                        row_data.append(0.0)
 
             writer.writerow(row_data)
+            prev_time = current_timestamp           
             time.sleep(0.1)
 
     logging.info(f"收集完成！資料已儲存至 {output_csv}")
