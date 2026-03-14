@@ -44,6 +44,10 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
     
     prev_time = time.time()
     prev_bytes = {port: 0 for port in spine_ports}
+    ema_ratio = 0.3
+    prev_ema_mbps = {}
+    time.sleep(0.1)
+
     # 準備 CSV 標頭
     headers = ["Timestamp"]
     for src in target_src_ids:
@@ -70,7 +74,6 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
                         q_depth = api.register_read('path_max_queue_depth_reg', reg_index)
                         q_depth = min(64,q_depth)
                         row_data.append(q_depth)
-                        
                         # 讀取完畢後強制歸零 (Reset-on-read)
                         # 避免前一次的壅塞極值污染下一秒的數據
                         api.register_write('path_max_queue_depth_reg', reg_index, 0)
@@ -87,10 +90,17 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
                             throughput_mbps = (bytes_delta * 8) / (time_delta * 1_000_000)
                         else:
                             throughput_mbps = 0.0
-                            
+
+                        if port not in prev_ema_mbps: 
+                            ema_mbps = throughput_mbps
+                        else:
+                            ema_mbps = (ema_ratio * throughput_mbps) + ((1 - ema_ratio) * prev_ema_mbps[port])
                         # 取小數點後兩位，保持資料集乾淨
-                        row_data.append(round(throughput_mbps, 2))
+                        row_data.append(round(ema_mbps, 2))
+
                         prev_bytes[port] = current_bytes
+                        prev_ema_mbps[port] = ema_mbps
+
                     except Exception:
                         row_data.append(0.0)
 
