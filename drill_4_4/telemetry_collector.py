@@ -3,6 +3,7 @@ import os
 import time
 import csv
 import logging
+import multiprocessing
 
 # 設定日誌
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -19,7 +20,7 @@ except ImportError as e:
     logging.error(f"[錯誤] 無法載入 P4-Utils: {e}")
     sys.exit(1)
 
-def collect_telemetry(target_leaf, test_duration_sec, output_csv):
+def collect_telemetry(src_add,target_leaf, test_duration_sec, output_csv, start_event = None):
     try:
         # 使用 load_topo 建立 NetworkGraph 物件
         topo = load_topo("topology.json")
@@ -32,20 +33,40 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
     # ================= 物理參數對應區 =================
     # 根據 ecmp.p4 邏輯：src_add = src_id * 16 + ingress_port
     # 假設 iperf 發送端是 h2 (10.0.2.2)，其 IP 結尾為 2，所以 src_id = 2
-    target_src_ids = [1] 
-    
-    # 假設目標接收端是 h1 (接在 l1 的 port 1)
-    # 那麼從 Spine (s1~s4) 進入 l1 的 ingress_port 通常是 2, 3, 4, 5
-    # 請根據你的 topology.json 實際狀況微調此陣列
+    target_src_ids = [] 
+    target_src_ids.append(src_add)
     spine_ports = [2, 3, 4, 5] 
     # ==================================================
 
     logging.info(f"開始收集 {target_leaf} 的 INT 佇列特徵，持續 {test_duration_sec} 秒...")
+    if start_event:
+        start_event.set()
     
     prev_time = time.time()
     prev_bytes = {port: 0 for port in spine_ports}
     ema_ratio = 0.3
     prev_ema_mbps = {}
+
+    logging.info("初始化硬體基準線，清除跨回合狀態殘留...")
+    for src in target_src_ids:
+        for port in spine_ports:
+            # 1. 抹除佇列極值暫存器 (Hardware Reset)
+            reg_index = src * 16 + port
+            try:
+                api.register_write('path_max_queue_depth_reg', reg_index, 0)
+            except Exception:
+                pass
+            
+            # 2. 預讀當下的 byte counter 作為本回合的 0 點基準線 (Baseline Pre-read)
+            try:
+                current_obj = api.counter_read('port_bytes_counter', port)
+                prev_bytes[port] = current_obj[0]
+            except Exception:
+                prev_bytes[port] = 0
+    # =================================================================
+
+    time.sleep(0.1) # 給予硬體狀態同步的緩衝時間
+
     time.sleep(0.1)
 
     # 準備 CSV 標頭
@@ -111,9 +132,10 @@ def collect_telemetry(target_leaf, test_duration_sec, output_csv):
     logging.info(f"收集完成！資料已儲存至 {output_csv}")
 
 if __name__ == "__main__":
-    # 設定要監聽的 Egress Leaf (假設流量打向 h1，h1 接在 l1)
+    # 設定要監聽的 Egress Leaf (假設流量 h1 打向 h2，h2 接在 l2)
+    SRC_ADD = 1  # 假設 src_add 為 2
     TARGET_LEAF = "l2"
     DURATION = 20 # 總收集秒數
     CSV_FILE = "l2_ml_features_qdepth.csv"
     
-    collect_telemetry(TARGET_LEAF, DURATION, CSV_FILE)
+    collect_telemetry(SRC_ADD,TARGET_LEAF, DURATION, CSV_FILE)

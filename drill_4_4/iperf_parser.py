@@ -11,7 +11,7 @@ def run_ping_measurement(source_host: str, target_ip: str, duration: int, result
     cmd = ["mx", source_host, "ping", "-c", str(duration), target_ip]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        match = re.search(r'rtt min/avg/max/mdev = [\d\.]+/(.*?)/[\d\.]+/(.*?) ms', result.stdout)
+        match = re.search(r'rtt min/avg/max/mdev = [\d\.]+/([\d\.]+)/[\d\.]+/[\d\.]+ ms', result.stdout)
         result_dict['latency'] = float(match.group(1)) if match else -1.0
     except Exception:
         result_dict['latency'] = -1.0
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     TEST_SOURCE = "h2"
     TEST_TARGET_IP = "10.0.1.1"
     FLOWS = 15
-    BW_PER_FLOW = "0.01M" 
+    BW_PER_FLOW = "0.3M" 
     
     latency_y, jitter_y, loss_y = run_iperf_and_get_metrics(TEST_SOURCE, TEST_TARGET_IP, BW_PER_FLOW, duration=10, num_flows=FLOWS)
     print(f"\n最終萃取矩陣 Y = [Latency: {latency_y} ms, Jitter: {jitter_y} ms, Total Loss: {loss_y:.2f} %]")
