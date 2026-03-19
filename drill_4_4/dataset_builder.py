@@ -4,10 +4,19 @@ import random
 import logging
 import multiprocessing
 import pandas as pd
-
+import json
+import sys
+import subprocess
 # 載入 Phase 1 與 Phase 2 模組
 from telemetry_collector import collect_telemetry
 from iperf_parser import run_iperf_and_get_metrics
+from all_controller import TopologyAnalyzer
+P4_UTILS_PATH = os.environ.get('P4_UTILS_PATH', '/home/p4/p4-utils')
+if P4_UTILS_PATH not in sys.path:
+    sys.path.append(P4_UTILS_PATH)
+
+from p4utils.utils.helper import load_topo
+from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [大腦] %(message)s')
 
@@ -18,6 +27,7 @@ MASTER_CSV = "training_dataset_master.csv"
 SOURCE_HOST = "h1"
 SRC_ADD = 1 
 
+CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2" #h2
 
@@ -25,22 +35,83 @@ DURATION = 10
 FLOWS = 12
 
 # 乾跑測試用的「當下假定拓樸頻寬」 (單位: Mbps)
-CURRENT_CAPACITY = [0.8, 0.8, 1.2, 1.2] 
+CURRENT_CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
 
-def simulate_set_weights():
-    """模擬 SDN 控制面下發 W-ECMP 權重"""
-    weights = [random.randint(1, 10) for _ in range(4)]
-    logging.info(f"==> 執行 SDN 控制面：下發隨機探索權重 {weights}")
-    time.sleep(0.5)
-    return weights
+def apply_real_group_weights(ingress_leaf, target_leaf, target_ip):
+    """透過重用 TopologyAnalyzer，對「同頻寬群組」下發真實權重"""
+    
+    # 1. 讀取拓樸並初始化分析器
+    with open('p4app.json', 'r') as f:
+        p4app_data = json.load(f)
+    topo = load_topo("topology.json")
+    analyzer = TopologyAnalyzer(p4app_data, topo)
+    
+    _ , hardware_rules = analyzer.get_ecmp_weights_and_rules(ingress_leaf, target_leaf)
+    num_components = len(hardware_rules)
+    
+    # 3. 針對「群組 (Component)」骰隨機權重 (例如: 產生 2 個權重 [8, 3])
+    group_weights = [random.randint(1, 10) for _ in range(num_components)]
+
+    thrift_port = topo.get_thrift_port(ingress_leaf)
+    try:
+        api = SimpleSwitchThriftAPI(thrift_port)
+    except Exception as e:
+        logging.error(f"無法連線至 {ingress_leaf} 的 Thrift API: {e}")
+        return {}
+
+    selector_name = "w_ecmp_selector"
+    action_name = "assign_component"
+
+    try:
+        # 建立新的 Action Profile Group
+        grp_handle = api.act_prof_create_group(selector_name)
+
+        # 根據群組權重，動態塞入對應的 Component ID
+        for idx, rule in enumerate(hardware_rules):
+            comp_id = str(rule['comp_id'])
+            weight = group_weights[idx]
+            for _ in range(weight):
+                mbr_handle = api.act_prof_create_member(selector_name, action_name, [comp_id])
+                api.act_prof_add_member_to_group(selector_name, mbr_handle, grp_handle)
+                
+    except Exception as e:
+        logging.error(f"Thrift API 群組創建失敗: {e}")
+        return {}
+
+    # 5. CLI 暴力置換路由表綁定
+    cli_cmds = [
+        "table_clear w_ecmp_table",
+        f"table_indirect_add_with_group w_ecmp_table {target_ip} => {grp_handle}"
+    ]
+    subprocess.run(
+        ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
+        input="\n".join(cli_cmds) + "\n",
+        text=True, capture_output=True
+    )
+    time.sleep(0.1) 
+
+    # 6. 【特徵對齊工程】：將群組權重「展開」回實體 Port 字典，方便寫入 CSV
+    # 例如群組 1 (Port 4, 5) 骰到權重 8，就會回傳 {4: 8, 5: 8}
+    port_weights = {}
+    for idx, rule in enumerate(hardware_rules):
+        weight = group_weights[idx]
+        for port, _ in rule['ports_and_macs']:
+            port_weights[port] = weight
+            
+    return port_weights
 
 def run_single_experiment(iteration_id):
     """執行單次測量生命週期：收集 -> 特徵聚合 -> 對齊 -> 寫入"""
     temp_x_csv = f"temp_x_{iteration_id}.csv"
     traffic_load = random.choice(["0.1M", "0.2M", "0.3M", "0.4M"]) 
     
-    current_weights = simulate_set_weights()
     logging.info(f"--- 開始實驗 #{iteration_id} | 流量壓力: {FLOWS} * {traffic_load} ---")
+
+    port_weights_dict = apply_real_group_weights(CONTROL_LEAF, TARGET_LEAF, TARGET_IP)
+    if not port_weights_dict:
+        logging.error("權重下發失敗，跳過本次實驗")
+        return
+
     start_event = multiprocessing.Event()  # 用於同步 Phase 1 和 Phase 2 的開始時間
 
     # 1. 啟動 Phase 1 (X 遙測收集器)
@@ -87,9 +158,9 @@ def run_single_experiment(iteration_id):
             total_mbps = float(traffic_load.replace('M', '')) * FLOWS
             agg_df['Total_Load_Mbps'] = round(total_mbps, 2)
             
-            for i in range(4):
-                agg_df[f'Weight_Port{i+2}'] = current_weights[i]
-                agg_df[f'Capacity_Port{i+2}'] = CURRENT_CAPACITY[i]
+            for i in range(2, 6):
+                agg_df[f'Weight_Port{i}'] = port_weights_dict.get(i, 1)
+                agg_df[f'Capacity_Port{i}'] = CURRENT_CAPACITY.get(i, 1.0)
                 
             # --- 寫入客觀物理反饋 (Y Labels) ---
             agg_df['Label_Latency_ms'] = latency_y
