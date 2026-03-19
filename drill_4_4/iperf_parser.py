@@ -36,6 +36,7 @@ def run_iperf_and_get_metrics(source_host: str, target_ip: str, bw_per_flow_str:
         "-b", bw_per_flow_str, 
         "-t", str(duration), 
         "-P", str(num_flows), 
+        "-l", "1400",
         "-J"
     ]
     

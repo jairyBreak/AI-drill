@@ -22,7 +22,7 @@ TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2" #h2
 
 DURATION = 10
-FLOWS = 15
+FLOWS = 12
 
 # 乾跑測試用的「當下假定拓樸頻寬」 (單位: Mbps)
 CURRENT_CAPACITY = [0.8, 0.8, 1.2, 1.2] 
@@ -37,7 +37,7 @@ def simulate_set_weights():
 def run_single_experiment(iteration_id):
     """執行單次測量生命週期：收集 -> 特徵聚合 -> 對齊 -> 寫入"""
     temp_x_csv = f"temp_x_{iteration_id}.csv"
-    traffic_load = random.choice(["0.1M", "0.3M", "0.5M", "1M"]) 
+    traffic_load = random.choice(["0.1M", "0.2M", "0.3M", "0.4M"]) 
     
     current_weights = simulate_set_weights()
     logging.info(f"--- 開始實驗 #{iteration_id} | 流量壓力: {FLOWS} * {traffic_load} ---")
@@ -65,7 +65,6 @@ def run_single_experiment(iteration_id):
         try:
             df = pd.read_csv(temp_x_csv)
             
-            # 【關鍵修改：特徵聚合邏輯】
             agg_data = {}
             for col in df.columns:
                 # 排除時間戳記，不進行數值運算
@@ -73,6 +72,7 @@ def run_single_experiment(iteration_id):
                     continue
                 # 策略 A: 佇列深度 (qdepth) 取最大值 (捕捉最嚴重的壅塞點)
                 if 'qdepth' in col.lower():
+                    print(df[col])
                     agg_data[f'{col}_max'] = round(df[col].max(), 4)
                 # 策略 B: 吞吐量 (Mbps) 取平均值與標準差 (捕捉常態負載與流量震盪)
                 # 計算統計特徵 (ddof=0 確保單筆資料時標準差為 0 而非 NaN)
