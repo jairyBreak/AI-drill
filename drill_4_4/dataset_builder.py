@@ -50,7 +50,7 @@ def apply_real_group_weights(ingress_leaf, target_leaf, target_ip):
     num_components = len(hardware_rules)
     
     # 3. 針對「群組 (Component)」骰隨機權重 (例如: 產生 2 個權重 [8, 3])
-    group_weights = [random.randint(1, 10) for _ in range(num_components)]
+    group_weights = [random.randint(1, 8) for _ in range(num_components)]
 
     thrift_port = topo.get_thrift_port(ingress_leaf)
     try:
@@ -180,7 +180,7 @@ def run_single_experiment(iteration_id):
         logging.error(f"找不到特徵檔 {temp_x_csv}，本次實驗作廢。\n")
 
 if __name__ == "__main__":
-    TOTAL_ITERATIONS = 5
+    TOTAL_ITERATIONS = 23
     logging.info(f"=== 啟動資料集生成大腦 (聚合特徵版 | 測試執行: {TOTAL_ITERATIONS} 迴圈) ===")
     
     try:
