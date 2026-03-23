@@ -180,7 +180,7 @@ def run_single_experiment(iteration_id):
         logging.error(f"找不到特徵檔 {temp_x_csv}，本次實驗作廢。\n")
 
 if __name__ == "__main__":
-    TOTAL_ITERATIONS = 23
+    TOTAL_ITERATIONS = 200
     logging.info(f"=== 啟動資料集生成大腦 (聚合特徵版 | 測試執行: {TOTAL_ITERATIONS} 迴圈) ===")
     
     try:

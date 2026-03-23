@@ -1,8 +1,8 @@
 {
   "p4_src": "p4src/ecmp.p4",
   "cli": true,
-  "pcap_dump": true,
-  "enable_log": true,
+  "pcap_dump": false,
+  "enable_log": false,
   "topology": {
     "assignment_strategy": "mixed", 
     "auto_arp_tables": true,
