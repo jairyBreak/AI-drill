@@ -26,8 +26,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - [大腦] %(message
 MASTER_CSV = "training_dataset_master.csv"
 SOURCE_HOST = "h1"
 SRC_ADD = 1 
-
 CONTROL_LEAF = "l1"
+
 TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2" #h2
 
