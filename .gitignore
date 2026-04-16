@@ -6,6 +6,7 @@
 **/pcap/
 **/*.pcap
 **/*.pcapng
+**/*.log
 
 __pycache__/
 *.pyc
