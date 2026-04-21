@@ -10,3 +10,9 @@
 
 __pycache__/
 *.pyc
+
+
+.claude
+CLAUDE.md
+drill_4_4/raw_telemetry/
+drill_4_4/topology.json

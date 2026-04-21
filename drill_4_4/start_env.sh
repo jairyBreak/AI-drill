@@ -4,7 +4,7 @@
 # 系統變數設定
 # ==========================================
 PYTHON_CMD="/home/p4/src/p4dev-python-venv/bin/python"
-P4RUN_CMD="sudo p4run"
+P4RUN_CMD="sudo /home/linuxey/Capstone/p4dev-python-venv/bin/p4run"
 CONTROLLER_CMD="$PYTHON_CMD all_controller.py"
 RATE_LIMITER_CMD="sudo $PYTHON_CMD rate_limiter.py"
 

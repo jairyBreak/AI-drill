@@ -171,7 +171,9 @@ def run_single_experiment(iteration_id):
             write_header = not os.path.exists(MASTER_CSV)
             agg_df.to_csv(MASTER_CSV, mode='a', index=False, header=write_header)
             
-            os.remove(temp_x_csv)
+            import shutil
+            os.makedirs("raw_telemetry", exist_ok=True)
+            shutil.move(temp_x_csv, f"raw_telemetry/experiment_{iteration_id}.csv")
             logging.info(f"實驗 #{iteration_id} 成功！已將 100 筆遙測壓縮為 1 筆特徵並寫入 {MASTER_CSV}\n")
             
         except Exception as e:

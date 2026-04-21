@@ -1,36 +1,63 @@
 import pandas as pd
 import numpy as np
+import joblib
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
-import joblib 
+from sklearn.metrics import (
+    classification_report, confusion_matrix, ConfusionMatrixDisplay,
+)
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
-csv_path = "training_dataset_master.csv"
-df = pd.read_csv(csv_path)
+CSV_PATH = "training_dataset_labeled.csv"
+CLASS_NAMES = ["NORMAL", "SUSTAINED_CONGESTION", "BURST_CONGESTION", "NON_CONGESTION_LOSS"]
 
-features = [col for col in df.columns if not col.startswith('Label_')]
+df = pd.read_csv(CSV_PATH)
+
+features = [col for col in df.columns if not col.startswith("Label_")]
 x = df[features]
+y = df["Label_Class"]
 
-targets = ['Label_Loss_Rate', 'Label_Latency_ms', 'Label_Jitter_ms']
-models = {}
+# stratified split：確保測試集四個類別比例與整體一致
+x_train, x_test, y_train, y_test = train_test_split(
+    x, y, test_size=0.2, stratify=y, random_state=42
+)
 
-for target in targets:
-    y = df[target]
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+print(f"訓練集: {len(x_train)} 筆，測試集: {len(x_test)} 筆")
+print(f"訓練集標籤分佈:\n{y_train.value_counts().sort_index()}\n")
 
-    rf = RandomForestRegressor(n_estimators=500, min_samples_leaf=2, max_depth=20,random_state=67, n_jobs=-1)
-    rf.fit(x_train, y_train)
+rf = RandomForestClassifier(
+    n_estimators=500,
+    max_depth=20,
+    min_samples_leaf=2,
+    class_weight="balanced",
+    random_state=67,
+    n_jobs=-1,
+)
+rf.fit(x_train, y_train)
+preds = rf.predict(x_test)
 
-    preds = rf.predict(x_test)
-    r2 = r2_score(y_test, preds)
-    mae = mean_absolute_error(y_test, preds)
+print(f"測試集標籤分佈:\n{y_test.value_counts().sort_index()}\n")
 
-    print(f" {target}-> R²: {r2:.4f}, MAE: {mae:.2f}")
-    
-    # 顯示該指標最關鍵的 3 個物理特徵
-    importance = pd.Series(rf.feature_importances_, index=features).sort_values(ascending=False)
-    print(f"-> importance ：\n{importance.head(10)}")
+all_labels = list(range(len(CLASS_NAMES)))
+print("=== Classification Report ===")
+print(classification_report(y_test, preds, target_names=CLASS_NAMES, labels=all_labels, zero_division=0))
 
-    model_name = f"rf_expert_{target.lower()}.pkl"
-    joblib.dump(rf, model_name)
-    models[target] = rf
+cm = confusion_matrix(y_test, preds, labels=all_labels)
+print("=== Confusion Matrix ===")
+print(cm)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=CLASS_NAMES)
+fig, ax = plt.subplots(figsize=(7, 6))
+disp.plot(ax=ax, xticks_rotation=30)
+plt.tight_layout()
+plt.savefig("confusion_matrix.png", dpi=150)
+print("混淆矩陣圖已存至 confusion_matrix.png")
+
+importance = pd.Series(rf.feature_importances_, index=features).sort_values(ascending=False)
+print("\n=== Top 10 Feature Importance ===")
+print(importance.head(10))
+
+joblib.dump(rf, "rf_anomaly_classifier.pkl")
+print("\n模型已存至 rf_anomaly_classifier.pkl")
