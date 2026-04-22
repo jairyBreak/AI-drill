@@ -1,7 +1,8 @@
+import sys
 import pandas as pd
 
-CSV_IN  = "training_dataset_master.csv"
-CSV_OUT = "training_dataset_labeled.csv"
+CSV_IN  = sys.argv[1] if len(sys.argv) > 1 else "training_dataset_master.csv"
+CSV_OUT = sys.argv[2] if len(sys.argv) > 2 else "training_dataset_labeled.csv"
 
 NORMAL               = 0
 SUSTAINED_CONGESTION = 1

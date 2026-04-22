@@ -150,7 +150,22 @@ def run_single_experiment(iteration_id):
                 elif 'mbps' in col.lower():
                     agg_data[f'{col}_mean'] = round(df[col].mean(), 4)
                     agg_data[f'{col}_std'] = round(df[col].std(ddof=0), 4)
-            
+
+            # 推導特徵（從聚合值計算，不需 raw telemetry）
+            _CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
+            _port_qdepth_maxes = []
+            _port_mbps_means   = []
+            for _n in [2, 3, 4, 5]:
+                _mean = agg_data[f'src1_port{_n}_mbps_mean']
+                _std  = agg_data[f'src1_port{_n}_mbps_std']
+                agg_data[f'src1_port{_n}_mbps_cv']    = round(_std / _mean if _mean > 0 else 0.0, 4)
+                agg_data[f'src1_port{_n}_load_util']  = round(_mean / _CAPACITY[_n], 4)
+                _port_qdepth_maxes.append(agg_data[f'src1_port{_n}_qdepth_max'])
+                _port_mbps_means.append(_mean)
+            agg_data['qdepth_max_imbalance'] = round(max(_port_qdepth_maxes) - min(_port_qdepth_maxes), 4)
+            agg_data['mbps_imbalance']       = round(pd.Series(_port_mbps_means).std(ddof=0), 4)
+            agg_data['total_qdepth_max']     = sum(_port_qdepth_maxes)
+
             # 將聚合後的字典轉換成單一列 (1 Row) 的 DataFrame
             agg_df = pd.DataFrame([agg_data])
             

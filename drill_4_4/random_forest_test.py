@@ -10,16 +10,21 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-CSV_PATH = "training_dataset_labeled.csv"
+CSV_PATH = "training_dataset_labeled_v2.csv"
 CLASS_NAMES = ["NORMAL", "SUSTAINED_CONGESTION", "BURST_CONGESTION", "NON_CONGESTION_LOSS"]
 
 df = pd.read_csv(CSV_PATH)
+
+# 移除樣本數不足的類別（stratify 需要每類至少 2 筆）
+class_counts = df["Label_Class"].value_counts()
+valid_classes = class_counts[class_counts >= 2].index
+df = df[df["Label_Class"].isin(valid_classes)]
 
 features = [col for col in df.columns if not col.startswith("Label_")]
 x = df[features]
 y = df["Label_Class"]
 
-# stratified split：確保測試集四個類別比例與整體一致
+# stratified split：確保測試集各類別比例與整體一致
 x_train, x_test, y_train, y_test = train_test_split(
     x, y, test_size=0.2, stratify=y, random_state=42
 )
