@@ -3,27 +3,42 @@ import json
 import logging
 import threading
 import re
+import numpy as np
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
+PING_COUNT = 100  # enough samples for stable p99 estimation
+
 def run_ping_measurement(source_host: str, target_ip: str, duration: int, result_dict: dict):
-    """保持不變：使用 ping 測量真實的佇列延遲 (Bufferbloat RTT)"""
-    cmd = ["mx", source_host, "ping", "-c", str(duration), target_ip]
+    """使用 ping 測量 RTT，同時收集 100 個個別樣本以計算 p99 延遲"""
+    cmd = ["mx", source_host, "ping", "-c", str(PING_COUNT), "-i", "0.1", target_ip]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        match = re.search(r'rtt min/avg/max/mdev = [\d\.]+/([\d\.]+)/[\d\.]+/[\d\.]+ ms', result.stdout)
-        result_dict['latency'] = float(match.group(1)) if match else -1.0
+
+        # parse individual RTT samples from each reply line
+        rtts = [float(x) for x in re.findall(r'time=([\d\.]+)\s*ms', result.stdout)]
+
+        if len(rtts) >= 10:
+            result_dict['latency'] = float(np.mean(rtts))
+            result_dict['p99_latency'] = float(np.percentile(rtts, 99))
+        else:
+            # fall back to summary line if too few individual samples parsed
+            match = re.search(r'rtt min/avg/max/mdev = [\d\.]+/([\d\.]+)/[\d\.]+/[\d\.]+ ms', result.stdout)
+            result_dict['latency'] = float(match.group(1)) if match else -1.0
+            result_dict['p99_latency'] = -1.0
     except Exception:
         result_dict['latency'] = -1.0
+        result_dict['p99_latency'] = -1.0
 
 def run_iperf_and_get_metrics(source_host: str, target_ip: str, bw_per_flow_str: str, duration: int = 10, num_flows: int = 15):
     """
     使用 iperf3 執行測量，透過 TCP 控制通道確保報告必達，並解析 JSON 獲得絕對精準的丟包率。
+    回傳 (avg_latency, p99_latency, avg_jitter, avg_loss_rate)。
     """
     logging.info(f"開始從 {source_host} 對 {target_ip} 發起 {num_flows} 條 iperf3 微流 (每條 {bw_per_flow_str})...")
-    
-    # 1. 啟動 Ping 背景測量 (負責收集 Y_latency)
-    ping_result = {'latency': -1.0}
+
+    # 1. 啟動 Ping 背景測量 (負責收集 Y_latency 與 Y_p99_latency)
+    ping_result = {'latency': -1.0, 'p99_latency': -1.0}
     ping_thread = threading.Thread(target=run_ping_measurement, args=(source_host, target_ip, duration, ping_result))
     ping_thread.start()
     
@@ -72,9 +87,10 @@ def run_iperf_and_get_metrics(source_host: str, target_ip: str, bw_per_flow_str:
     # 等待 ping 結束
     ping_thread.join()
     avg_latency = ping_result['latency']
-    
-    logging.info(f"[Y] latency: {avg_latency} ms | jitter: {avg_jitter} ms | loss rate: {avg_loss_rate:.2f}%")
-    return avg_latency, avg_jitter, avg_loss_rate
+    p99_latency = ping_result['p99_latency']
+
+    logging.info(f"[Y] latency: {avg_latency} ms | p99: {p99_latency} ms | jitter: {avg_jitter} ms | loss rate: {avg_loss_rate:.2f}%")
+    return avg_latency, p99_latency, avg_jitter, avg_loss_rate
 
 if __name__ == "__main__":
     # mx h1 iperf3 -s &
@@ -84,5 +100,5 @@ if __name__ == "__main__":
     FLOWS = 15
     BW_PER_FLOW = "0.3M" 
     
-    latency_y, jitter_y, loss_y = run_iperf_and_get_metrics(TEST_SOURCE, TEST_TARGET_IP, BW_PER_FLOW, duration=10, num_flows=FLOWS)
-    print(f"\n最終萃取矩陣 Y = [Latency: {latency_y} ms, Jitter: {jitter_y} ms, Total Loss: {loss_y:.2f} %]")
+    latency_y, p99_y, jitter_y, loss_y = run_iperf_and_get_metrics(TEST_SOURCE, TEST_TARGET_IP, BW_PER_FLOW, duration=10, num_flows=FLOWS)
+    print(f"\n最終萃取矩陣 Y = [Latency: {latency_y} ms, p99: {p99_y} ms, Jitter: {jitter_y} ms, Total Loss: {loss_y:.2f} %]")

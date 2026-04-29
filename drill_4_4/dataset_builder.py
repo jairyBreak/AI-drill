@@ -123,7 +123,7 @@ def run_single_experiment(iteration_id):
     start_event.wait()  # 等待 Phase 1 準備就緒後再啟動 Phase 2
 
     # 2. 啟動 Phase 2 (Y 標籤萃取器)
-    latency_y, jitter_y, loss_y = run_iperf_and_get_metrics(
+    latency_y, p99_latency_y, jitter_y, loss_y = run_iperf_and_get_metrics(
         SOURCE_HOST, TARGET_IP, traffic_load, DURATION, FLOWS
     )
 
@@ -179,6 +179,7 @@ def run_single_experiment(iteration_id):
                 
             # --- 寫入客觀物理反饋 (Y Labels) ---
             agg_df['Label_Latency_ms'] = latency_y
+            agg_df['Label_Latency_p99_ms'] = p99_latency_y
             agg_df['Label_Jitter_ms'] = jitter_y
             agg_df['Label_Loss_Rate'] = loss_y
             
