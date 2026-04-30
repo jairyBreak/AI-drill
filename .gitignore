@@ -15,6 +15,9 @@ __pycache__/
 .claude
 CLAUDE.md
 
+drill_4_4/skills
+drill_4_4/.gemini
+
 drill_4_4/topology.json
 drill_4_4/project_report.md
 project_report.md
@@ -22,18 +25,10 @@ drill_4_4/final_summary.txt
 drill_4_4/DETAILED_COLUMN_REFERENCE.txt
 
 drill_4_4/temp_x_*.csv
-drill_4_4/raw_telemetry/
 
-drill_4_4/training_dataset_master.csv
 drill_4_4/training_dataset_temporal.csv
 drill_4_4/training_dataset_ecdf.csv
-drill_4_4/training_dataset_labeled.csv
-drill_4_4/training_dataset_labeled_v2.csv
-drill_4_4/training_dataset_v2.csv
 drill_4_4/ecdf_objects.pkl
-
-drill_4_4/l*-commands.txt
-drill_4_4/s*-commands.txt
 
 drill_4_4/analyze.sh
 drill_4_4/detailed_analysis.sh

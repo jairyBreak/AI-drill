@@ -377,7 +377,7 @@
       "name" : "deparser",
       "id" : 0,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/include/parsers.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/include/parsers.p4",
         "line" : 57,
         "column" : 8,
         "source_fragment" : "MyDeparser"
@@ -392,7 +392,7 @@
       "name" : "cnt_ingress",
       "id" : 0,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 17,
         "column" : 33,
         "source_fragment" : "cnt_ingress"
@@ -404,7 +404,7 @@
       "name" : "cnt_egress",
       "id" : 1,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 18,
         "column" : 33,
         "source_fragment" : "cnt_egress"
@@ -416,7 +416,7 @@
       "name" : "port_drop_counter",
       "id" : 2,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 19,
         "column" : 34,
         "source_fragment" : "port_drop_counter"
@@ -428,7 +428,7 @@
       "name" : "port_bytes_counter",
       "id" : 3,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 20,
         "column" : 32,
         "source_fragment" : "port_bytes_counter"
@@ -442,7 +442,7 @@
       "name" : "q_depth_reg",
       "id" : 0,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 10,
         "column" : 23,
         "source_fragment" : "q_depth_reg"
@@ -454,7 +454,7 @@
       "name" : "last_best_p_reg",
       "id" : 1,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 11,
         "column" : 23,
         "source_fragment" : "last_best_p_reg"
@@ -466,7 +466,7 @@
       "name" : "port_map_reg",
       "id" : 2,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 12,
         "column" : 24,
         "source_fragment" : "port_map_reg"
@@ -478,7 +478,7 @@
       "name" : "path_max_queue_depth_reg",
       "id" : 3,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 15,
         "column" : 24,
         "source_fragment" : "path_max_queue_depth_reg"
@@ -492,7 +492,7 @@
       "name" : "calc",
       "id" : 0,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 267,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
@@ -590,7 +590,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 51,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
@@ -612,7 +612,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 51,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
@@ -634,7 +634,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 51,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
@@ -656,7 +656,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 51,
             "column" : 8,
             "source_fragment" : "mark_to_drop(standard_metadata)"
@@ -687,7 +687,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 54,
             "column" : 8,
             "source_fragment" : "meta.ecmp_group_id = comp_id"
@@ -751,7 +751,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 81,
             "column" : 39,
             "source_fragment" : "(bit<32>)num_nhops-1"
@@ -774,7 +774,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 81,
             "column" : 8,
             "source_fragment" : "random(logical_idx1,(bit<32>)0,(bit<32>)num_nhops-1)"
@@ -826,7 +826,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 82,
             "column" : 39,
             "source_fragment" : "(bit<32>)num_nhops-1"
@@ -849,7 +849,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 82,
             "column" : 8,
             "source_fragment" : "random(logical_idx2,(bit<32>)0,(bit<32>)num_nhops-1)"
@@ -858,7 +858,7 @@
         {
           "op" : "_jump_if_zero",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 84,
             "column" : 8,
             "source_fragment" : "if"
@@ -897,7 +897,7 @@
         {
           "op" : "_jump_if_zero",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 85,
             "column" : 12,
             "source_fragment" : "if"
@@ -976,7 +976,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 86,
             "column" : 16,
             "source_fragment" : "logical_idx2 = 0"
@@ -985,7 +985,7 @@
         {
           "op" : "_jump",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 85,
             "column" : 12,
             "source_fragment" : "if"
@@ -1033,7 +1033,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 89,
             "column" : 16,
             "source_fragment" : "logical_idx2 = logical_idx2 + 1"
@@ -1105,7 +1105,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 96,
             "column" : 38,
             "source_fragment" : "map_addr_1"
@@ -1128,7 +1128,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 96,
             "column" : 8,
             "source_fragment" : "port_map_reg.read(port_num_1, map_addr_1)"
@@ -1200,7 +1200,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 97,
             "column" : 38,
             "source_fragment" : "map_addr_2"
@@ -1223,7 +1223,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 97,
             "column" : 8,
             "source_fragment" : "port_map_reg.read(port_num_2, map_addr_2)"
@@ -1255,7 +1255,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 98,
             "column" : 42,
             "source_fragment" : "(bit<32>)meta.ecmp_group_id"
@@ -1278,7 +1278,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 98,
             "column" : 8,
             "source_fragment" : "last_best_p_reg.read(port_num_mem,(bit<32>)meta.ecmp_group_id)"
@@ -1287,7 +1287,7 @@
         {
           "op" : "_jump_if_zero",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 100,
             "column" : 8,
             "source_fragment" : "if"
@@ -1336,7 +1336,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 101,
             "column" : 12,
             "source_fragment" : "port_num_mem = port_num_1"
@@ -1359,7 +1359,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 104,
             "column" : 8,
             "source_fragment" : "q_depth_reg.read(queue_len_1, port_num_1)"
@@ -1382,7 +1382,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 105,
             "column" : 8,
             "source_fragment" : "q_depth_reg.read(queue_len_2, port_num_2)"
@@ -1405,7 +1405,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 106,
             "column" : 8,
             "source_fragment" : "q_depth_reg.read(queue_len_mem, port_num_mem)"
@@ -1414,7 +1414,7 @@
         {
           "op" : "_jump_if_zero",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 108,
             "column" : 8,
             "source_fragment" : "if"
@@ -1463,7 +1463,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 109,
             "column" : 12,
             "source_fragment" : "best_port = port_num_2"
@@ -1482,7 +1482,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 110,
             "column" : 12,
             "source_fragment" : "best_queue = queue_len_2"
@@ -1491,7 +1491,7 @@
         {
           "op" : "_jump",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 108,
             "column" : 8,
             "source_fragment" : "if"
@@ -1516,7 +1516,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 113,
             "column" : 12,
             "source_fragment" : "best_port = port_num_1"
@@ -1535,7 +1535,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 114,
             "column" : 12,
             "source_fragment" : "best_queue = queue_len_1"
@@ -1544,7 +1544,7 @@
         {
           "op" : "_jump_if_zero",
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 116,
             "column" : 8,
             "source_fragment" : "if"
@@ -1593,7 +1593,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 117,
             "column" : 12,
             "source_fragment" : "best_port = port_num_mem"
@@ -1612,7 +1612,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 118,
             "column" : 12,
             "source_fragment" : "best_queue = queue_len_mem"
@@ -1654,7 +1654,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 121,
             "column" : 8,
             "source_fragment" : "meta.ecmp_hash = (bit<14>)best_port"
@@ -1696,7 +1696,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 123,
             "column" : 8,
             "source_fragment" : "best_queue = best_queue + 1"
@@ -1719,7 +1719,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 124,
             "column" : 8,
             "source_fragment" : "q_depth_reg.write((bit<32>)best_port,best_queue)"
@@ -1751,7 +1751,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 125,
             "column" : 30,
             "source_fragment" : "(bit<32>)meta.ecmp_group_id"
@@ -1774,7 +1774,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 125,
             "column" : 8,
             "source_fragment" : "last_best_p_reg.write((bit<32>)meta.ecmp_group_id,best_port)"
@@ -1809,7 +1809,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 129,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.srcAddr = hdr.ethernet.dstAddr"
@@ -1828,7 +1828,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 130,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.dstAddr = dstAddr"
@@ -1847,7 +1847,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 131,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = port"
@@ -1889,7 +1889,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 132,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl - 1"
@@ -1924,7 +1924,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 129,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.srcAddr = hdr.ethernet.dstAddr"
@@ -1943,7 +1943,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 130,
             "column" : 8,
             "source_fragment" : "hdr.ethernet.dstAddr = dstAddr"
@@ -1962,7 +1962,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 131,
             "column" : 8,
             "source_fragment" : "standard_metadata.egress_spec = port"
@@ -2004,7 +2004,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 132,
             "column" : 8,
             "source_fragment" : "hdr.ipv4.ttl = hdr.ipv4.ttl - 1"
@@ -2030,7 +2030,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 177,
             "column" : 12,
             "source_fragment" : "meta.l4_dstPort = hdr.tcp.dstPort"
@@ -2049,7 +2049,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 178,
             "column" : 12,
             "source_fragment" : "meta.l4_srcPort = hdr.tcp.srcPort"
@@ -2075,7 +2075,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 181,
             "column" : 12,
             "source_fragment" : "meta.l4_dstPort = hdr.udp.dstPort"
@@ -2094,7 +2094,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 182,
             "column" : 12,
             "source_fragment" : "meta.l4_srcPort = hdr.udp.srcPort"
@@ -2120,7 +2120,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 185,
             "column" : 12,
             "source_fragment" : "meta.l4_dstPort = 0"
@@ -2139,7 +2139,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 186,
             "column" : 12,
             "source_fragment" : "meta.l4_srcPort = 0"
@@ -2178,7 +2178,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 172,
             "column" : 33,
             "source_fragment" : "(bit<32>)standard_metadata.ingress_port"
@@ -2197,7 +2197,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 172,
             "column" : 8,
             "source_fragment" : "port_bytes_counter.count((bit<32>)standard_metadata.ingress_port)"
@@ -2229,7 +2229,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 174,
             "column" : 26,
             "source_fragment" : "(bit<32>)standard_metadata.ingress_port"
@@ -2248,7 +2248,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 174,
             "column" : 8,
             "source_fragment" : "cnt_ingress.count((bit<32>)standard_metadata.ingress_port)"
@@ -2287,7 +2287,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 210,
             "column" : 43,
             "source_fragment" : "(bit<32>)standard_metadata.egress_spec"
@@ -2310,7 +2310,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 210,
             "column" : 12,
             "source_fragment" : "q_depth_reg.read(local_q_depth,(bit<32>)standard_metadata.egress_spec)"
@@ -2336,7 +2336,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 207,
             "column" : 8,
             "source_fragment" : "bit<32> local_q_depth = 0"
@@ -2362,7 +2362,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 215,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.path_queue_depth = local_q_depth"
@@ -2451,7 +2451,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 222,
             "column" : 60,
             "source_fragment" : "src_add"
@@ -2474,7 +2474,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 222,
             "column" : 20,
             "source_fragment" : "path_max_queue_depth_reg.write((bit<32>)src_add, hdr.int_hdr.path_queue_depth)"
@@ -2563,7 +2563,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 220,
             "column" : 70,
             "source_fragment" : "src_add"
@@ -2586,7 +2586,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 220,
             "column" : 16,
             "source_fragment" : "path_max_queue_depth_reg.read(current_depth, (bit<32>)src_add)"
@@ -2612,7 +2612,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 224,
             "column" : 16,
             "source_fragment" : "hdr.ethernet.etherType = hdr.int_hdr.next_proto"
@@ -2627,7 +2627,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 225,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.setInvalid()"
@@ -2649,7 +2649,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 230,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.setValid()"
@@ -2668,7 +2668,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 231,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.path_queue_depth = local_q_depth"
@@ -2710,7 +2710,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 232,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.src_id = (bit<16>)hdr.ipv4.srcAddr[7:0]"
@@ -2729,7 +2729,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 233,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.next_proto = hdr.ethernet.etherType"
@@ -2748,7 +2748,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 234,
             "column" : 16,
             "source_fragment" : "hdr.ethernet.etherType = 0x9999"
@@ -2787,7 +2787,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 256,
             "column" : 29,
             "source_fragment" : "(bit<32>)standard_metadata.egress_port"
@@ -2806,7 +2806,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 256,
             "column" : 12,
             "source_fragment" : "cnt_egress.count((bit<32>)standard_metadata.egress_port)"
@@ -2845,7 +2845,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 252,
             "column" : 12,
             "source_fragment" : "(bit<32>)standard_metadata.egress_port"
@@ -2877,7 +2877,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 253,
             "column" : 21,
             "source_fragment" : "current_q_len"
@@ -2900,7 +2900,7 @@
             }
           ],
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 251,
             "column" : 8,
             "source_fragment" : "q_depth_reg.write( ..."
@@ -2914,7 +2914,7 @@
       "name" : "ingress",
       "id" : 0,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 34,
         "column" : 8,
         "source_fragment" : "MyIngress"
@@ -2925,7 +2925,7 @@
           "name" : "tbl_ecmp172",
           "id" : 0,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 172,
             "column" : 8,
             "source_fragment" : "port_bytes_counter.count((bit<32>)standard_metadata.ingress_port); ..."
@@ -2954,7 +2954,7 @@
           "name" : "tbl_ecmp177",
           "id" : 1,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 177,
             "column" : 28,
             "source_fragment" : "= hdr.tcp.dstPort; ..."
@@ -2983,7 +2983,7 @@
           "name" : "tbl_ecmp181",
           "id" : 2,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 181,
             "column" : 28,
             "source_fragment" : "= hdr.udp.dstPort; ..."
@@ -3012,7 +3012,7 @@
           "name" : "tbl_ecmp185",
           "id" : 3,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 185,
             "column" : 28,
             "source_fragment" : "= 0; ..."
@@ -3041,7 +3041,7 @@
           "name" : "MyIngress.ipv4_lpm",
           "id" : 4,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 159,
             "column" : 10,
             "source_fragment" : "ipv4_lpm"
@@ -3079,7 +3079,7 @@
           "name" : "MyIngress.w_ecmp_table",
           "id" : 5,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 58,
             "column" : 10,
             "source_fragment" : "w_ecmp_table"
@@ -3111,7 +3111,7 @@
           "name" : "MyIngress.drill_params_table",
           "id" : 6,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 136,
             "column" : 10,
             "source_fragment" : "drill_params_table"
@@ -3148,7 +3148,7 @@
           "name" : "MyIngress.ecmp_group_to_nhop",
           "id" : 7,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 147,
             "column" : 10,
             "source_fragment" : "ecmp_group_to_nhop"
@@ -3192,7 +3192,7 @@
           "name" : "tbl_ecmp207",
           "id" : 8,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 207,
             "column" : 8,
             "source_fragment" : "bit<32> local_q_depth = 0"
@@ -3221,7 +3221,7 @@
           "name" : "tbl_ecmp210",
           "id" : 9,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 210,
             "column" : 12,
             "source_fragment" : "q_depth_reg.read(local_q_depth,(bit<32>)standard_metadata.egress_spec)"
@@ -3250,7 +3250,7 @@
           "name" : "tbl_ecmp215",
           "id" : 10,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 215,
             "column" : 45,
             "source_fragment" : "="
@@ -3279,7 +3279,7 @@
           "name" : "tbl_ecmp220",
           "id" : 11,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 220,
             "column" : 16,
             "source_fragment" : "path_max_queue_depth_reg.read(current_depth, (bit<32>)src_add)"
@@ -3308,7 +3308,7 @@
           "name" : "tbl_ecmp222",
           "id" : 12,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 222,
             "column" : 20,
             "source_fragment" : "path_max_queue_depth_reg.write((bit<32>)src_add, hdr.int_hdr.path_queue_depth)"
@@ -3337,7 +3337,7 @@
           "name" : "tbl_ecmp224",
           "id" : 13,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 224,
             "column" : 39,
             "source_fragment" : "= hdr.int_hdr.next_proto; ..."
@@ -3366,7 +3366,7 @@
           "name" : "tbl_ecmp230",
           "id" : 14,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 230,
             "column" : 16,
             "source_fragment" : "hdr.int_hdr.setValid(); ..."
@@ -3397,7 +3397,7 @@
           "name" : "MyIngress.w_ecmp_selector",
           "id" : 0,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 56,
             "column" : 51,
             "source_fragment" : "w_ecmp_selector"
@@ -3431,7 +3431,7 @@
           "name" : "node_3",
           "id" : 0,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 176,
             "column" : 11,
             "source_fragment" : "hdr.tcp.isValid()"
@@ -3454,7 +3454,7 @@
           "name" : "node_5",
           "id" : 1,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 180,
             "column" : 16,
             "source_fragment" : "hdr.udp.isValid()"
@@ -3477,7 +3477,7 @@
           "name" : "node_8",
           "id" : 2,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 189,
             "column" : 12,
             "source_fragment" : "hdr.ipv4.isValid()"
@@ -3500,7 +3500,7 @@
           "name" : "node_14",
           "id" : 3,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 209,
             "column" : 11,
             "source_fragment" : "standard_metadata.egress_spec < 255"
@@ -3526,7 +3526,7 @@
           "name" : "node_16",
           "id" : 4,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 213,
             "column" : 11,
             "source_fragment" : "hdr.int_hdr.isValid()"
@@ -3549,7 +3549,7 @@
           "name" : "node_17",
           "id" : 5,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 214,
             "column" : 15,
             "source_fragment" : "local_q_depth > hdr.int_hdr.path_queue_depth"
@@ -3575,7 +3575,7 @@
           "name" : "node_19",
           "id" : 6,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 217,
             "column" : 15,
             "source_fragment" : "standard_metadata.egress_spec == 1"
@@ -3601,7 +3601,7 @@
           "name" : "node_21",
           "id" : 7,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 221,
             "column" : 19,
             "source_fragment" : "hdr.int_hdr.path_queue_depth > current_depth"
@@ -3627,7 +3627,7 @@
           "name" : "node_24",
           "id" : 8,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 229,
             "column" : 15,
             "source_fragment" : "hdr.ipv4.isValid() && standard_metadata.ingress_port == 1"
@@ -3672,7 +3672,7 @@
       "name" : "egress",
       "id" : 1,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 244,
         "column" : 8,
         "source_fragment" : "MyEgress"
@@ -3683,7 +3683,7 @@
           "name" : "tbl_ecmp251",
           "id" : 15,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 251,
             "column" : 8,
             "source_fragment" : "q_depth_reg.write( ..."
@@ -3712,7 +3712,7 @@
           "name" : "tbl_ecmp256",
           "id" : 16,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 256,
             "column" : 12,
             "source_fragment" : "cnt_egress.count((bit<32>)standard_metadata.egress_port)"
@@ -3744,7 +3744,7 @@
           "name" : "node_29",
           "id" : 9,
           "source_info" : {
-            "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+            "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
             "line" : 255,
             "column" : 11,
             "source_fragment" : "(bit<32>)standard_metadata.egress_port < 512"
@@ -3784,7 +3784,7 @@
       "name" : "cksum",
       "id" : 0,
       "source_info" : {
-        "filename" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4",
+        "filename" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4",
         "line" : 267,
         "column" : 1,
         "source_fragment" : "update_checksum( ..."
@@ -3847,7 +3847,7 @@
       ["standard_metadata", "priority"]
     ]
   ],
-  "program" : "/home/linuxey/Goldmine/AI-drill/drill_4_4/p4src/ecmp.p4i",
+  "program" : "/home/p4/drill/drill_4_4/p4src/ecmp.p4i",
   "__meta__" : {
     "version" : [2, 23],
     "compiler" : "https://github.com/p4lang/p4c"
