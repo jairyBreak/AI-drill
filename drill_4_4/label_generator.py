@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 
-CSV_IN  = sys.argv[1] if len(sys.argv) > 1 else "training_dataset_master.csv"
+CSV_IN  = sys.argv[1] if len(sys.argv) > 1 else "training_dataset_ecdf.csv"
 CSV_OUT = sys.argv[2] if len(sys.argv) > 2 else "training_dataset_labeled.csv"
 
 NORMAL               = 0
@@ -38,7 +38,7 @@ def classify_row(row):
         return NON_CONGESTION_LOSS
     if max_q == 64 and latency > 200 and loss > 5.0:
         return SUSTAINED_CONGESTION
-    if imbalance > 0.08:
+    if imbalance > 0.015:
         return UNBALANCED_LOAD
     if max_q >= 10:
         return BURST_CONGESTION
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     df = df.copy()
     df["Label_Class"] = df.apply(classify_row, axis=1)
     counts = df["Label_Class"].value_counts().sort_index()
-    print("=== 標籤分佈 (Sweet Spot: 15ms / 0.08) ===")
+    print("=== 標籤分佈 (Sweet Spot: 15ms / 0.015) ===")
     for cls_id, cnt in counts.items():
         print(f"  {cls_id} {CLASS_NAMES[cls_id]:<22}: {cnt:>5} 筆  ({cnt/len(df)*100:.1f}%)")
     df.to_csv(CSV_OUT, index=False)
