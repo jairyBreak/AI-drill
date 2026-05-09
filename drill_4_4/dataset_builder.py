@@ -36,31 +36,38 @@ DURATION = 10
 CURRENT_CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
 
 def get_params(iteration_id):
-    """循環 5 種狀態，確保資料集極度均衡"""
-    state_idx = iteration_id % 5
+    """強化版採樣邏輯：極大化最優權重比例 (50%)，確保模型學會『2:3 即低延遲』"""
+    state_idx = iteration_id % 10
     
-    if state_idx == 0: # NORMAL
-        logging.info(f">> 狀態 [{iteration_id}]: NORMAL")
-        return [random.randint(4, 5), random.randint(4, 5)], "0.1M", random.randint(4, 8)
-        
-    elif state_idx == 1: # SUSTAINED_CONGESTION
+    if state_idx < 5: # OPTIMAL_BALANCED (50% 權重：修復核心問題)
+        logging.info(f">> 狀態 [{iteration_id}]: OPTIMAL_BALANCED (權重 2:3)")
+        # 測試在最優權重下，負載從低到極高 (1M ~ 12M)
+        load_mbps = random.uniform(0.1, 0.7)
+        flows = random.randint(8, 20)
+        return [2, 3], f"{load_mbps:.2f}M", flows
+
+    elif state_idx == 5: # NEAR_OPTIMAL (10%)
+        logging.info(f">> 狀態 [{iteration_id}]: NEAR_OPTIMAL (輕微偏差)")
+        weights = random.choice([[1, 1], [3, 2], [2, 2]])
+        load_mbps = random.uniform(0.2, 0.4)
+        flows = random.randint(10, 15)
+        return weights, f"{load_mbps:.2f}M", flows
+
+    elif state_idx == 6: # SUSTAINED_CONGESTION (10%)
         logging.info(f">> 狀態 [{iteration_id}]: SUSTAINED_CONGESTION")
         return [4, 4], "0.5M", random.randint(15, 25)
         
-    elif state_idx == 2: # BURST_CONGESTION
+    elif state_idx == 7: # BURST_CONGESTION (10%)
         logging.info(f">> 狀態 [{iteration_id}]: BURST_CONGESTION")
-        # 臨界負載：容易觸發佇列堆積但不會一直滿載
         return [random.randint(3, 5), random.randint(3, 5)], "0.3M", random.randint(10, 14)
         
-    elif state_idx == 3: # HIGH_JITTER
+    elif state_idx == 8: # HIGH_JITTER (10%)
         logging.info(f">> 狀態 [{iteration_id}]: HIGH_JITTER")
-        # 極多流、極低單流頻寬 (觸發 Buffer 爭搶)
         load = random.choice(["0.02M", "0.04M", "0.06M"])
-        return [random.randint(3, 6), random.randint(3, 6)], load, random.randint(40, 70)
+        return [random.randint(2, 4), random.randint(2, 4)], load, random.randint(40, 70)
         
-    elif state_idx == 4: # UNBALANCED_LOAD
+    elif state_idx == 9: # UNBALANCED_LOAD (10%)
         logging.info(f">> 狀態 [{iteration_id}]: UNBALANCED_LOAD")
-        # 極端權重，中等負載
         load = random.choice(["0.3M", "0.4M"])
         weights = random.choice([[8, 1], [1, 8], [7, 2], [2, 7]])
         return weights, load, random.randint(5, 10)
