@@ -23,7 +23,7 @@ python3 dataset_builder.py
 ```
 *產出：`research_results/data/datasets/` 下的原始數據與標籤。*
 
-### 3. 訓練最佳化模型
+### 3. 生產與訓練最佳化模型（Pull 後先做）
 使用當前最佳的「經典進化版」參數進行訓練，並自動顯示 R2 與 MAE 指標：
 ```bash
 python3 train_simplified_models.py
