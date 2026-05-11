@@ -1,0 +1,30 @@
+ 1) total_qdepth_p99         : 0.3770
+ 2) total_qdepth_max         : 0.1535
+ 3) qdepth_fft_max_all       : 0.0616
+ 4) Total_Util_Sum           : 0.0442
+ 5) src1_port4_mbps_cv       : 0.0415
+ 6) max_qdepth_p99           : 0.0335
+ 7) src1_port3_mbps_cv       : 0.0281
+ 8) src1_port3_qdepth_max    : 0.0280
+ 9) src1_port5_mbps_cv       : 0.0254
+10) src1_port4_load_util     : 0.0230
+11) src1_port2_mbps_cv       : 0.0221
+12) src1_port5_load_util     : 0.0215
+13) src1_port2_load_util     : 0.0214
+14) src1_port3_load_util     : 0.0141
+15) src1_port2_qdepth_max    : 0.0111
+16) Weight_Port4             : 0.0109
+17) Weight_Port5             : 0.0108
+18) idx_load_balance         : 0.0091
+19) Weight_Port2             : 0.0080
+20) Weight_Port3             : 0.0074
+21) Norm_Load_P2             : 0.0063
+22) Norm_Load_P3             : 0.0062
+23) src1_port5_qdepth_max    : 0.0056
+24) src1_port4_qdepth_max    : 0.0052
+25) Max_Util_Diff            : 0.0045
+26) Norm_Load_P5             : 0.0045
+27) Group_Imbalance          : 0.0042
+28) Norm_Load_P4             : 0.0041
+29) qdepth_max_imbalance     : 0.0037
+30) mbps_imbalance           : 0.0036

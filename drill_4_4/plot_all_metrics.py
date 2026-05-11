@@ -10,17 +10,27 @@ from datetime import datetime
 # 導入控制器邏輯
 from realtime_ml_controller import MLController, RankECDF
 
-def run_full_validation(test_duration=60, output_csv="full_metrics_validation_4.csv", output_img="full_metrics_comparison_4.png"):
+def run_full_validation(test_duration=60, output_csv="research_results/data/validation/full_metrics_validation.csv", output_img="research_results/plots/validation/full_metrics_comparison.png"):
     print("\n" + "="*100)
-    print(f" [全指標可視化驗證工具] 開始測試 - 預計時長: {test_duration} 秒")
-    print(f" 目標指標: Latency, Jitter, Loss")
+    print(f" [全指標可視化驗證工具 v4.2] 開始測試 - 預計時長: {test_duration} 秒")
     print(f" 數據: {output_csv} | 圖表: {output_img}")
     print("="*100 + "\n")
+    
+    # 確保目錄存在
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    os.makedirs(os.path.dirname(output_img), exist_ok=True)
     
     # 設定環境
     sys.modules['__main__'].RankECDF = RankECDF
     ctrl = MLController()
     
+    # 預熱
+    print(" [系統] 正在預熱資料緩存 (10s)...", end='', flush=True)
+    for _ in range(10):
+        ctrl.collect_window(duration=1.0)
+        print(".", end='', flush=True)
+    print(" 完成！\n")
+
     results = []
     start_time = time.time()
     
@@ -62,7 +72,7 @@ def run_full_validation(test_duration=60, output_csv="full_metrics_validation_4.
             now_str = now_dt.strftime('%H:%M:%S')
             print(f"{now_str:^10} | "
                   f"{preds['latency']:5.1f}/{real_lat:4.1f} | "
-                  f"{preds['jitter']:5.2f}/{real_jit:4.2f} | "
+                  f"{preds['jitter']:5.1f}/{real_jit:4.2f} | "
                   f"{preds['loss']:5.2f}/{real_loss:4.1f} | "
                   f"{feats['Total_Util_Sum']:4.2f}")
                 
@@ -78,37 +88,55 @@ def run_full_validation(test_duration=60, output_csv="full_metrics_validation_4.
     res_df.to_csv(output_csv, index=False)
     print(f"\n數據已寫入 {output_csv}")
 
-    # 繪圖
-    print("正在生成三指標對比圖表...")
+    # 繪圖前處理
+    plot_df = res_df.copy()
+    
+    # 設置繪圖
+    print("正在生成動態自適應對比圖表...")
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
-    t_axis = range(len(res_df))
+    t_axis = range(len(plot_df))
 
     # Plot 1: Latency
-    axes[0].plot(t_axis, res_df['Real_Lat'], 'o-', label='Real Latency (Ping)', color='blue', alpha=0.5, markersize=3)
-    axes[0].plot(t_axis, res_df['Pred_Lat'], 's-', label='Predicted Latency (ML)', color='red', linewidth=1.5)
+    axes[0].plot(t_axis, plot_df['Real_Lat'], 'o-', label='Real Latency (Ping)', color='#1f77b4', alpha=0.7, markersize=4)
+    axes[0].plot(t_axis, plot_df['Pred_Lat'], 's-', label='Predicted Latency (ML)', color='#d62728', linewidth=2)
     axes[0].set_ylabel("Latency (ms)")
-    axes[0].legend(loc='upper right')
+    axes[0].legend(loc='upper left')
     axes[0].grid(True, linestyle='--', alpha=0.6)
-    axes[0].set_title("Network Performance Validation: Predicted vs Real")
+    axes[0].set_title(f"Network Performance Validation (v4.2 - Auto-Scaling)")
+    
+    # 動態計算 Y 軸上限
+    y_max_lat = max(plot_df['Real_Lat'].max() if not plot_df['Real_Lat'].isna().all() else 0, 
+                    plot_df['Pred_Lat'].quantile(0.98) if len(plot_df)>1 else plot_df['Pred_Lat'].max()) * 1.2
+    if np.isnan(y_max_lat) or y_max_lat < 50: y_max_lat = 100
+    axes[0].set_ylim(-10, y_max_lat)
 
     # Plot 2: Jitter
-    axes[1].plot(t_axis, res_df['Real_Jit'], 'o-', label='Real Jitter (iperf3)', color='cyan', alpha=0.5, markersize=3)
-    axes[1].plot(t_axis, res_df['Pred_Jit'], 's-', label='Predicted Jitter (ML)', color='darkorange', linewidth=1.5)
+    axes[1].plot(t_axis, plot_df['Real_Jit'], 'o-', label='Real Jitter (iperf3)', color='#17becf', alpha=0.7, markersize=4)
+    axes[1].plot(t_axis, plot_df['Pred_Jit'], 's-', label='Predicted Jitter (ML)', color='#ff7f0e', linewidth=2)
     axes[1].set_ylabel("Jitter (ms)")
-    axes[1].legend(loc='upper right')
+    axes[1].legend(loc='upper left')
     axes[1].grid(True, linestyle='--', alpha=0.6)
+    
+    y_max_jit = max(plot_df['Real_Jit'].max(), 
+                    plot_df['Pred_Jit'].quantile(0.98) if len(plot_df)>1 else plot_df['Pred_Jit'].max()) * 1.2
+    if np.isnan(y_max_jit) or y_max_jit < 20: y_max_jit = 40
+    axes[1].set_ylim(-5, y_max_jit)
 
     # Plot 3: Loss
-    axes[2].plot(t_axis, res_df['Real_Loss'], 'o-', label='Real Loss (iperf3)', color='black', alpha=0.5, markersize=3)
-    axes[2].plot(t_axis, res_df['Pred_Loss'], 's-', label='Predicted Loss (ML)', color='purple', linewidth=1.5)
+    axes[2].plot(t_axis, plot_df['Real_Loss'], 'o-', label='Real Loss (iperf3)', color='#7f7f7f', alpha=0.7, markersize=4)
+    axes[2].plot(t_axis, plot_df['Pred_Loss'], 's-', label='Predicted Loss (ML)', color='#9467bd', linewidth=2)
     axes[2].set_ylabel("Loss Rate (%)")
     axes[2].set_xlabel("Sampling Steps (approx 1.5s per step)")
-    axes[2].legend(loc='upper right')
+    axes[2].legend(loc='upper left')
     axes[2].grid(True, linestyle='--', alpha=0.6)
+    
+    y_max_loss = max(plot_df['Real_Loss'].max(), plot_df['Pred_Loss'].max()) * 1.2
+    if np.isnan(y_max_loss) or y_max_loss < 5: y_max_loss = 10
+    axes[2].set_ylim(-1, y_max_loss)
 
     plt.tight_layout()
-    plt.savefig(output_img)
-    print(f"對比圖表已保存至 {output_img}")
+    plt.savefig(output_img, dpi=150)
+    print(f"動態自適應圖表已保存至 {output_img}")
 
 if __name__ == "__main__":
     duration = int(sys.argv[1]) if len(sys.argv) > 1 else 60

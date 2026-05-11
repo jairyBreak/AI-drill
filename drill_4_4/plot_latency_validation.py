@@ -31,6 +31,14 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
     print("="*95 + "\n")
     
     ctrl = MLController()
+    
+    # 預熱
+    print(" [系統] 正在預熱資料緩存 (10s)...", end='', flush=True)
+    for _ in range(10):
+        ctrl.collect_window(duration=1.0)
+        print(".", end='', flush=True)
+    print(" 完成！\n")
+
     results = []
     start_time = time.time()
     smoothed_lat = 20.0
@@ -44,8 +52,8 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
             df = ctrl.collect_window(duration=1.0)
             X, feats = ctrl.extract_features(df)
             
-            # 2. 同步 Ping
-            real_lat = get_single_ping()
+            # 2. 獲取背景執行緒採集的真實值 (10s 平均)
+            real_lat = ctrl.real_latency
             
             # 3. 預測與逆對數轉換
             pred_log = ctrl.models['latency'].predict(X)[0]

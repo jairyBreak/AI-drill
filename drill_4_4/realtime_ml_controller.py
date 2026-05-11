@@ -9,6 +9,7 @@ import logging
 import subprocess
 import warnings
 import threading
+import collections
 import re
 from datetime import datetime
 from contextlib import redirect_stdout, redirect_stderr
@@ -40,10 +41,11 @@ IPERF_PORT = 5202
 IPERF_LOG = "./iperf_server.log"
 
 MODELS = {
-    "latency": "rf_regressor_latency_ms_simplified.pkl",
-    "loss": "rf_regressor_loss_rate_simplified.pkl",
-    "jitter": "rf_regressor_jitter_ms_simplified.pkl",
-    "anomaly": "rf_anomaly_classifier_simplified.pkl"
+    "latency": "rf_model_latency_simplified.pkl",
+    "latency_p99": "rf_model_latency_p99_simplified.pkl",
+    "loss": "rf_model_loss_simplified.pkl",
+    "jitter": "rf_model_jitter_simplified.pkl",
+    "anomaly": "rf_model_anomaly_simplified.pkl"
 }
 
 FEATURE_NAMES = [
@@ -82,9 +84,17 @@ class MLController:
         self.ecdf_objs = joblib.load("ecdf_objects.pkl")
         
         self.prev_bytes = {p: 0 for p in PORTS}
-        self.real_latency = 0.0
-        self.real_loss = 0.0
-        self.real_jitter = 0.0
+        
+        # 滑動視窗緩存 (對齊 10 秒訓練尺度)
+        self.telemetry_buffer = collections.deque(maxlen=100) # 10s @ 10Hz
+        self.lat_buffer = collections.deque(maxlen=20)       # 10s @ 2Hz
+        self.jit_buffer = collections.deque(maxlen=10)       # 10s @ 1Hz
+        self.loss_buffer = collections.deque(maxlen=10)      # 10s @ 1Hz
+        
+        # 背景採集原始值
+        self._raw_latency = 20.0
+        self._raw_loss = 0.0
+        self._raw_jitter = 0.0
         
         # 預測值平滑緩存
         self.smoothed_latency = 20.0 
@@ -93,6 +103,19 @@ class MLController:
         
         self.init_baseline()
         self.start_iperf_monitoring()
+
+    @property
+    def real_latency(self):
+        valid = [v for v in self.lat_buffer if v > 0]
+        return np.mean(valid) if valid else self._raw_latency
+
+    @property
+    def real_jitter(self):
+        return np.mean(self.jit_buffer) if self.jit_buffer else self._raw_jitter
+
+    @property
+    def real_loss(self):
+        return np.mean(self.loss_buffer) if self.loss_buffer else self._raw_loss
 
     def start_iperf_monitoring(self):
         """啟動 iperf3 監控 (單探針流模式)"""
@@ -125,31 +148,24 @@ class MLController:
 
     def bg_log_tail(self):
         """監控 iperf3 日誌檔案並解析單流指標"""
-        # 匹配 jitter 和 loss (%)，支援負數和空格
         pattern = re.compile(r'([\d\.]+)\s+ms\s+[\d\s\w]+/([\d\s]+)\s+\((-?[\d\.]+)%\)')
-        
         while not os.path.exists(IPERF_LOG): time.sleep(0.5)
-        
         with open(IPERF_LOG, 'r') as f:
             while True:
                 line = f.readline()
                 if not line:
                     time.sleep(0.1)
                     continue
-                
-                # 單流模式下，解析包含 "sec" 的行即可
                 if "sec" in line and "/" in line:
                     match = pattern.search(line)
                     if match:
                         jitter = float(match.group(1))
                         loss_pct = float(match.group(3))
-                        
-                        # 處理溢出 Bug：負數丟包率視為高擁塞
-                        if loss_pct < 0:
-                            loss_pct = 20.0
-                        
-                        self.real_jitter = jitter
-                        self.real_loss = loss_pct
+                        if loss_pct < 0: loss_pct = 20.0
+                        self._raw_jitter = jitter
+                        self._raw_loss = loss_pct
+                        self.jit_buffer.append(jitter)
+                        self.loss_buffer.append(loss_pct)
 
     def bg_iperf_client(self):
         """在 h1 運行 iperf3 client 產生 UDP 探針 (單流 0.1M)"""
@@ -157,7 +173,7 @@ class MLController:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
     def bg_ping(self):
-        """每 0.5 秒執行一次 ping 來獲取真實延遲 (增加超時至 5s 以應對高擁塞)"""
+        """每 0.5 秒執行一次 ping 來獲取真實延遲"""
         while True:
             try:
                 output = subprocess.check_output(
@@ -166,11 +182,15 @@ class MLController:
                 )
                 match = re.search(r'time=([\d\.]+)\s*ms', output)
                 if match:
-                    self.real_latency = float(match.group(1))
+                    val = float(match.group(1))
+                    self._raw_latency = val
+                    self.lat_buffer.append(val)
                 else:
-                    self.real_latency = -1.0 
+                    self._raw_latency = -1.0 
+                    self.lat_buffer.append(-1.0)
             except:
-                self.real_latency = -1.0
+                self._raw_latency = -1.0
+                self.lat_buffer.append(-1.0)
             time.sleep(0.5)
 
     def init_baseline(self):
@@ -180,7 +200,7 @@ class MLController:
                 except: pass
 
     def collect_window(self, duration=1.0, interval=0.1):
-        samples = []
+        """採集新樣本並更新滑動視窗"""
         start_t = time.time()
         prev_sample_t = start_t
         with open(os.devnull, 'w') as f, redirect_stdout(f), redirect_stderr(f):
@@ -197,11 +217,20 @@ class MLController:
                     cnt = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
                     db = cnt - self.prev_bytes[p]
                     if db < 0: db = 0
-                    row[f'mbps_{p}'] = ((db * 8) / (dt * 1_000_000)) if dt > 0 else 0
+                    
+                    # 計算原始 Mbps
+                    raw_mbps = ((db * 8) / (dt * 1_000_000)) if dt > 0 else 0
+                    
+                    # --- 爆發過濾器 (Burst Filter) ---
+                    # 如果計算出的 Mbps 超過物理頻寬的 2 倍，判定為工具初始化雜訊或緩衝區排空
+                    # 將其限幅在 2.0x Capacity，既保留了「擁塞」的特徵，又去除了「天文數字」的噪音
+                    limit = CAPACITY[p] * 2.0
+                    row[f'mbps_{p}'] = min(limit, raw_mbps)
+                    
                     self.prev_bytes[p] = cnt
-                samples.append(row)
+                self.telemetry_buffer.append(row)
                 prev_sample_t = now
-        return pd.DataFrame(samples)
+        return pd.DataFrame(list(self.telemetry_buffer))
 
     def get_current_weights(self):
         weights = {p: 1 for p in PORTS} 
@@ -283,11 +312,19 @@ class MLController:
 
     def run(self):
         print("\n" + "="*125)
-        print(" [ML 智能監控 v3.2] 啟動 - 真實指標來源: iperf3 Server (UDP) & Ping")
+        print(" [ML 智能監控 v4.0] 啟動 - 滑動視窗模式 (10s 尺度對齊)")
         print("="*125 + "\n")
+        
+        # 預熱
+        print(" [系統] 正在預熱資料緩存 (10s)...", end='', flush=True)
+        for _ in range(10):
+            self.collect_window(duration=1.0)
+            print(".", end='', flush=True)
+        print(" 完成！\n")
+
         try:
             while True:
-                df = self.collect_window()
+                df = self.collect_window(duration=1.0)
                 X, feats = self.extract_features(df)
                 preds = {}
                 for k, m in self.models.items():
