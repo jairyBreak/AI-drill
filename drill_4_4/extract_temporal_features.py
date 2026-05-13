@@ -9,8 +9,8 @@ import pandas as pd
 
 PORTS = [2, 3, 4, 5]
 TELEMETRY_DIR = "raw_telemetry"
-BASE_CSV = sys.argv[1] if len(sys.argv) > 1 else "training_dataset_master.csv"
-OUT_CSV = sys.argv[2] if len(sys.argv) > 2 else "training_dataset_temporal.csv"
+BASE_CSV = sys.argv[1] if len(sys.argv) > 1 else "research_results/data/datasets/training_dataset_master.csv"
+OUT_CSV = sys.argv[2] if len(sys.argv) > 2 else "research_results/data/datasets/training_dataset_temporal.csv"
 
 
 def temporal_features_for_experiment(exp_path: str) -> dict:
@@ -47,6 +47,9 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
         # Max Change
         q_diff = np.max(np.abs(np.diff(q))) if len(q) >= 2 else 0.0
         feats[f"qdepth_max_diff_port{p}"] = float(q_diff)
+
+        danger_threshold = 40.0 
+        feats[f"qdepth_danger_ratio_port{p}"] = float(np.sum(q > danger_threshold) / len(q)) if len(q) > 0 else 0.0
 
         # --- FFT Features (Frequency Domain) ---
         if len(q) > 10:

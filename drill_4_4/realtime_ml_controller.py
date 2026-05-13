@@ -42,28 +42,23 @@ IPERF_LOG = "./iperf_server.log"
 
 MODELS = {
     "latency": "rf_model_latency_simplified.pkl",
-    "latency_p99": "rf_model_latency_p99_simplified.pkl",
+    #"latency_p99": "rf_model_latency_p99_simplified.pkl",
     "loss": "rf_model_loss_simplified.pkl",
     "jitter": "rf_model_jitter_simplified.pkl",
     "anomaly": "rf_model_anomaly_simplified.pkl"
 }
 
 FEATURE_NAMES = [
-    "Total_Util_Sum",
-    "Max_Util_Diff",
-    "Group_Imbalance",
+    "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
     "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
-    "idx_load_balance",
-    "mbps_imbalance",
-    "max_qdepth_p99",
-    "total_qdepth_p99",
-    "total_qdepth_max",
-    "qdepth_max_imbalance",
-    "qdepth_fft_max_all",
-    "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
+    "idx_load_balance", "mbps_imbalance", "max_qdepth_p99",
+    "total_qdepth_p99", "total_qdepth_max", "qdepth_max_imbalance",
+    "qdepth_fft_max_all", "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
     "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
     "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
-    "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max"
+    "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max",
+    "qdepth_danger_ratio_port2", "qdepth_danger_ratio_port3","qdepth_danger_ratio_port4","qdepth_danger_ratio_port5",        
+    "qdepth_oscillation"
 ]
 
 class RankECDF:

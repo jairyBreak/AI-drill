@@ -7,6 +7,8 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.metrics import r2_score, mean_absolute_error
 
+CSV_PATH = "research_results/data/datasets/training_dataset_ecdf.csv"
+
 # ==========================================
 # 經典進化配置 (The Evolved Baseline)
 # ==========================================
@@ -14,7 +16,7 @@ from sklearn.metrics import r2_score, mean_absolute_error
 BEST_PARAMS = dict(
     n_estimators=500,      # 增加樹的數量到 1000 (這是安全加法，通常能降誤差)
     max_depth=20,           # 回到原本最強的深度
-    min_samples_leaf=1,     # 回到原本最強的緩衝
+    min_samples_leaf=5,     # 回到原本最強的緩衝
     max_features=0.8,       # 全局特徵視角
     bootstrap=True,
     n_jobs=-1,
@@ -31,16 +33,13 @@ SELECTED_FEATURES = [
     "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
     "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
     "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max",
-    "qdepth_sq",    # 新武器 1
-    "qdepth_slope"  # 新武器 2
+    "qdepth_danger_ratio_port2", "qdepth_danger_ratio_port3","qdepth_danger_ratio_port4","qdepth_danger_ratio_port5",        
+    "qdepth_oscillation"
 ]
 
 def add_evolved_features(df):
     df = df.copy()
     
-    # 計算新特徵
-    df["qdepth_sq"] = df["total_qdepth_p99"] ** 2
-    df["qdepth_slope"] = df["total_qdepth_p99"].diff().fillna(0)
     
     # 確保原始特徵完整
     for i in [2, 3, 4, 5]:
@@ -54,14 +53,17 @@ def add_evolved_features(df):
     load_a, weight_a = df["src1_port2_mbps_mean"]+df["src1_port3_mbps_mean"], df["Weight_Port2"]+df["Weight_Port3"]
     load_b, weight_b = df["src1_port4_mbps_mean"]+df["src1_port5_mbps_mean"], df["Weight_Port4"]+df["Weight_Port5"]
     df["Group_Imbalance"] = np.abs((load_a/weight_a.replace(0,1)) - (load_b/weight_b.replace(0,1)))
-    
     return df
 
-CSV_PATH = "research_results/data/datasets/training_dataset_ecdf_cleaned.csv"
 
 def train_evolved_baseline():
     print("=== 正在訓練經典進化版模型 (致敬最強 Baseline) ===\n")
     df = pd.read_csv(CSV_PATH)
+
+    original_len = len(df)
+    df = df[df["Label_Latency_ms"] <= 1500.0]
+    print(f"剔除了 {original_len - len(df)} 筆極端延遲雜訊 (Mininet Artifacts)")
+
     df = add_evolved_features(df)
     
     available_features = [f for f in SELECTED_FEATURES if f in df.columns]
@@ -75,7 +77,7 @@ def train_evolved_baseline():
     
     for label_col, name in targets:
         subset = df[df[label_col] != -1.0].copy()
-        X, y_log = subset[available_features], np.log1p(subset[label_col])
+        X, y_log = subset[available_features], np.log1p(subset[label_col])   # np.log1p(subset[label_col])  
         
         cv = KFold(n_splits=5, shuffle=True, random_state=42)
         r2_list, mae_list = [], []
@@ -90,6 +92,10 @@ def train_evolved_baseline():
             preds_orig = np.expm1(model.predict(X_te))
             r2_list.append(r2_score(np.log1p(y_te_raw), model.predict(X_te)))
             mae_list.append(mean_absolute_error(y_te_raw, preds_orig))
+
+            #preds = model.predict(X_te)
+            #r2_list.append(r2_score(y_te_raw, preds))  # 直接算真實世界的 R2
+            #mae_list.append(mean_absolute_error(y_te_raw, preds))
             
         unit = "%" if name == "loss" else "ms"
         print(f"[{name:15}] R2(log): {np.mean(r2_list):.4f} | MAE: {np.mean(mae_list):.4f} {unit}")
@@ -98,6 +104,15 @@ def train_evolved_baseline():
         final_model.fit(X, y_log)
         joblib.dump(final_model, f"rf_model_{name}_simplified.pkl")
 
+        importances = final_model.feature_importances_
+        indices = np.argsort(importances)[::-1] # 由大到小排序
+        
+        print(f"\n--- [{name}] Top 10 特徵重要性 ---")
+        for i in range(len(available_features)):
+            feat_name = available_features[indices[i]]
+            feat_weight = importances[indices[i]]
+            print(f"{i+1:2d}. {feat_name:<28} ({feat_weight:.4f})")
+        print("-" * 40 + "\n")
     # 異常分類
     X, y = df[available_features], (df["Label_Loss_Rate"] > 0.001).astype(int)
     clf = RandomForestClassifier(**BEST_PARAMS)

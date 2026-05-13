@@ -7,15 +7,18 @@ import matplotlib.pyplot as plt
 
 # 設定與訓練腳本一致的特徵清單
 SELECTED_FEATURES = [
-    "total_qdepth_p99", "total_qdepth_max", "max_qdepth_p99", "qdepth_fft_max_all",
-    "src1_port2_mbps_mean", "src1_port3_mbps_mean", "src1_port4_mbps_mean", "src1_port5_mbps_mean",
-    "src1_port2_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port5_load_util",
-    "src1_port2_qdepth_max", "src1_port3_qdepth_max", "src1_port4_qdepth_max", "src1_port5_qdepth_max",
-    "src1_port2_mbps_cv", "src1_port3_mbps_cv", "src1_port4_mbps_cv", "src1_port5_mbps_cv",
-    "total_qdepth_p99_ecdf", "max_qdepth_p99_ecdf", "mbps_imbalance_ecdf", "qdepth_fft_max_all_ecdf",
-    "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance", "idx_load_balance",
+    "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
+    "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
+    "idx_load_balance", "mbps_imbalance", "max_qdepth_p99",
+    "total_qdepth_p99", "total_qdepth_max", "qdepth_max_imbalance",
+    "qdepth_fft_max_all", "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
+    "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
+    "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
+    "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max",
+    "qdepth_danger_ratio_port2", "qdepth_danger_ratio_port3","qdepth_danger_ratio_port4","qdepth_danger_ratio_port5",
     "qdepth_sq",
-    "qdepth_slope"
+    "qdepth_fft_max_all",        
+    "qdepth_oscillation",
 ]
 
 def add_ultimate_features(df):

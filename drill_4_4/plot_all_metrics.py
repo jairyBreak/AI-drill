@@ -10,8 +10,8 @@ from datetime import datetime
 # 導入控制器邏輯
 from realtime_ml_controller import MLController, RankECDF
 
-def run_full_validation(test_duration=60, output_csv="research_results/data/validation/full_metrics_validation.csv", output_img="research_results/plots/validation/full_metrics_comparison.png"):
-    print("\n" + "="*100)
+def run_full_validation(test_duration=60, output_csv="research_results/data/validation/full_metrics_validation_v2_3.csv", output_img="research_results/plots/validation/full_metrics_comparison_v2_3.png"):
+    print("\n" + "="*30)
     print(f" [全指標可視化驗證工具 v4.2] 開始測試 - 預計時長: {test_duration} 秒")
     print(f" 數據: {output_csv} | 圖表: {output_img}")
     print("="*100 + "\n")
@@ -139,5 +139,5 @@ def run_full_validation(test_duration=60, output_csv="research_results/data/vali
     print(f"動態自適應圖表已保存至 {output_img}")
 
 if __name__ == "__main__":
-    duration = int(sys.argv[1]) if len(sys.argv) > 1 else 60
+    duration = int(sys.argv[1]) if len(sys.argv) > 1 else 90
     run_full_validation(duration)
