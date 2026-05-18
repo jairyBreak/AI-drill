@@ -19,16 +19,21 @@
 ### 2. 數據採集與資料集構建
 如果需要增加新的訓練樣本（自動化打流量並紀錄特徵）：
 ```bash
-python3 dataset_builder.py
+python3 dataset_builder.py          # 產出 10s 尺度特徵
+python3 rolling_dataset_builder.py  # 產出 1s 尺度連續特徵
 ```
 *產出：`research_results/data/datasets/` 下的原始數據與標籤。*
 
-### 3. 生產與訓練最佳化模型（Pull 後先做）
-使用當前最佳的「經典進化版」參數進行訓練，並自動顯示 R2 與 MAE 指標：
+### 3. 生產與訓練最佳化模型（雙尺度架構）
+根據應用場景選擇適合的模型進行訓練：
 ```bash
+# 針對 10 秒尺度的歷史分析模型 (注重宏觀分佈)
 python3 train_simplified_models.py
+
+# 針對 1 秒尺度的即時預測模型 (注重趨勢與 What-If 權重模擬)
+python3 train_1s_models.py
 ```
-*產出：`rf_model_*_simplified.pkl` 模型檔案。*
+*產出：`rf_model_*_simplified.pkl` (10s) 或 `rf_model_*_1s.pkl` (1s) 模型檔案。*
 
 ### 4. 啟動實時監控預測
 啟動控制器，實時觀察預測值與真實流量（iperf3/Ping）的對比：
@@ -71,6 +76,8 @@ python3 plot_all_metrics.py [持續秒數]
 - [x] **滑動視窗機制**：實作 10s 滑動視窗，對齊模型訓練尺度。
 - [x] **特徵進化**：加入 `qdepth_sq` (非線性) 與 `qdepth_slope` (趨勢) 特徵。
 - [x] **自動調優**：完成大規模超參數搜尋，確立了經典進化版 (Guardian Mode) 為最佳配置。
+- [x] **雙尺度模型並行 (Dual-scale Models)**：建立 10 秒尺度歷史分析模型 (`_simplified.pkl`) 與 1 秒尺度瞬態響應模型 (`_1s.pkl`) 的雙軌並行機制。
+- [x] **時序與映射特徵 (Time-Series & Projection Features)**：在 1 秒模型中引入 `QDepth_Trend`, `Rehash_Impact` 衰減，以及用於權重兵棋推演的 `Expected_Util_PX` 特徵，並徹底消除 Data Leakage。
 - [x] **視覺優化**：圖表自動限幅與自適應 Y 軸縮放。
 
 ---

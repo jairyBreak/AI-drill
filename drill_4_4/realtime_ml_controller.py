@@ -52,7 +52,7 @@ FEATURE_NAMES = [
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
     "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
     "idx_load_balance", "mbps_imbalance", "max_qdepth_p99",
-    "total_qdepth_p99", "total_qdepth_max", "qdepth_max_imbalance",
+    "total_qdepth_p99", "total_qdepth_mean", "total_qdepth_max", "qdepth_max_imbalance",
     "qdepth_fft_max_all", "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
     "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
     "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
@@ -164,7 +164,7 @@ class MLController:
 
     def bg_iperf_client(self):
         """在 h1 運行 iperf3 client 產生 UDP 探針 (單流 0.1M)"""
-        cmd = ["mx", "h1", "iperf3", "-c", TARGET_IP, "-u", "-b", "0.1M", "-t", "3600", "-i", "1", "-p", str(IPERF_PORT)]
+        cmd = ["mx", "h1", "iperf3", "-c", TARGET_IP, "-u", "-b", "0.01M", "-t", "3600", "-i", "1", "-p", str(IPERF_PORT)]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
     def bg_ping(self):
@@ -212,16 +212,9 @@ class MLController:
                     cnt = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
                     db = cnt - self.prev_bytes[p]
                     if db < 0: db = 0
-                    
-                    # 計算原始 Mbps
                     raw_mbps = ((db * 8) / (dt * 1_000_000)) if dt > 0 else 0
-                    
-                    # --- 爆發過濾器 (Burst Filter) ---
-                    # 如果計算出的 Mbps 超過物理頻寬的 2 倍，判定為工具初始化雜訊或緩衝區排空
-                    # 將其限幅在 2.0x Capacity，既保留了「擁塞」的特徵，又去除了「天文數字」的噪音
                     limit = CAPACITY[p] * 2.0
                     row[f'mbps_{p}'] = min(limit, raw_mbps)
-                    
                     self.prev_bytes[p] = cnt
                 self.telemetry_buffer.append(row)
                 prev_sample_t = now
@@ -255,13 +248,24 @@ class MLController:
         for p in PORTS:
             feats[f'Weight_Port{p}'] = current_weights.get(p, 1)
 
-        q_p99s, m_means, m_cvs, q_maxes, utils = [], [], [], [], []
+        q_p99s, m_means, m_cvs, q_maxes, utils, q_cvs, q_means = [], [], [], [], [], [], []
+        danger_threshold = 40.0
+        
         for p in PORTS:
             q, m = df[f'qdepth_{p}'].values, df[f'mbps_{p}'].values
             p99, m_mean, m_std = np.percentile(q, 99), np.mean(m), np.std(m)
             m_cv = m_std / m_mean if m_mean > 0.001 else 0
             q_max = np.max(q)
+            q_mean_val = np.mean(q)
             util = m_mean / CAPACITY[p]
+            
+            # 佇列危險比例
+            feats[f'qdepth_danger_ratio_port{p}'] = np.mean(q > danger_threshold) if len(q) > 0 else 0.0
+            
+            # 佇列變異係數 (用於計算震盪指標)
+            q_cv = np.std(q) / q_mean_val if q_mean_val > 0.1 else 0.0
+            q_cvs.append(q_cv)
+            q_means.append(q_mean_val)
             
             feats[f'src1_port{p}_qdepth_max'] = q_max
             feats[f'src1_port{p}_mbps_cv'] = m_cv
@@ -272,6 +276,14 @@ class MLController:
 
         feats["Total_Util_Sum"] = sum(utils)
         feats["Max_Util_Diff"] = max(utils) - min(utils)
+        
+        # 全網佇列震盪與平均指標
+        feats["qdepth_oscillation"] = np.mean(q_cvs) if q_cvs else 0.0
+        feats["total_qdepth_mean"] = sum(q_means)
+        feats["total_qdepth_max"] = sum(q_maxes)
+        feats["total_qdepth_p99"] = sum(q_p99s)
+        feats["max_qdepth_p99"] = max(q_p99s) if q_p99s else 0.0
+        feats["qdepth_max_imbalance"] = max(q_maxes) - min(q_maxes) if q_maxes else 0.0
 
         load_a = m_means[0] + m_means[1]
         weight_a = feats['Weight_Port2'] + feats['Weight_Port3']
@@ -280,10 +292,6 @@ class MLController:
         feats["Group_Imbalance"] = np.abs((load_a / max(1, weight_a)) - (load_b / max(1, weight_b)))
 
         feats["mbps_imbalance"] = np.std(m_means)
-        feats["max_qdepth_p99"] = np.max(q_p99s)
-        feats["total_qdepth_p99"] = np.sum(q_p99s)
-        feats["total_qdepth_max"] = np.sum(q_maxes)
-        feats["qdepth_max_imbalance"] = np.max(q_maxes) - np.min(q_maxes)
         
         fft_mags = []
         for p in PORTS:
@@ -307,40 +315,34 @@ class MLController:
 
     def run(self):
         print("\n" + "="*125)
-        print(" [ML 智能監控 v4.0] 啟動 - 滑動視窗模式 (10s 尺度對齊)")
+        print(" [ML 智能監控 v4.2] 啟動 - 10s 離散採集模式 (與資料集完全對齊)")
         print("="*125 + "\n")
         
-        # 預熱
-        print(" [系統] 正在預熱資料緩存 (10s)...", end='', flush=True)
-        for _ in range(10):
-            self.collect_window(duration=1.0)
-            print(".", end='', flush=True)
-        print(" 完成！\n")
-
         try:
             while True:
-                df = self.collect_window(duration=1.0)
-                X, feats = self.extract_features(df)
+                # 直接採集 10 秒數據 (如同 dataset_builder)
+                df_10s = self.collect_window(duration=10.0)
+                
+                X, feats = self.extract_features(df_10s)
                 preds = {}
                 for k, m in self.models.items():
                     p = m.predict(X)[0]
                     if k != "anomaly": p = np.expm1(p)
                     preds[k] = p
                 
-                self.smoothed_latency = (0.4 * preds['latency']) + (0.6 * self.smoothed_latency)
-                self.smoothed_jitter = (0.4 * preds['jitter']) + (0.6 * self.smoothed_jitter)
-                self.smoothed_loss = (0.4 * preds['loss']) + (0.6 * self.smoothed_loss)
+                # 在 10s 模式下，不需要強力的平滑，直接顯示當下這 10s 的預測
+                self.smoothed_latency = preds['latency']
+                self.smoothed_jitter = preds['jitter']
+                self.smoothed_loss = preds['loss']
                 
                 status = "NORMAL" if preds['anomaly'] == 0 else "\033[91mANOMALY\033[0m"
                 ping_str = f"{self.real_latency:5.1f}ms" if self.real_latency > 0 else "\033[91mTIMEOUT\033[0m"
                 
-                sys.stdout.write("\033[K") 
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] {status:7} | "
                       f"Lat: {self.smoothed_latency:5.1f}/{ping_str} | "
                       f"Jit: {self.smoothed_jitter:4.1f}/{self.real_jitter:4.1f}ms | "
                       f"Loss: {self.smoothed_loss:4.1f}/{self.real_loss:4.1f}% | "
-                      f"Util: {feats['Total_Util_Sum']:4.2f}", end='\r')
-                sys.stdout.flush()
+                      f"Util: {feats['Total_Util_Sum']:4.2f}")
         except KeyboardInterrupt: print("\n停止。")
 
 if __name__ == "__main__":

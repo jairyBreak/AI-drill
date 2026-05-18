@@ -14,21 +14,21 @@ CSV_PATH = "research_results/data/datasets/training_dataset_ecdf.csv"
 # ==========================================
 # 回歸最初表現最好的參數組合，並輔以大森林平滑
 BEST_PARAMS = dict(
-    n_estimators=500,      # 增加樹的數量到 1000 (這是安全加法，通常能降誤差)
+    n_estimators=800,      # 增加樹的數量到 1000 (這是安全加法，通常能降誤差)
     max_depth=20,           # 回到原本最強的深度
-    min_samples_leaf=5,     # 回到原本最強的緩衝
+    min_samples_leaf=2,     # 回到原本最強的緩衝
     max_features=0.8,       # 全局特徵視角
     bootstrap=True,
     n_jobs=-1,
     random_state=42
 )
 
-# 最初最強的特徵清單 (30) + 2個新特徵
+# 最初最強的特徵清單 (30) + 新特徵
 SELECTED_FEATURES = [
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
     "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
     "idx_load_balance", "mbps_imbalance", "max_qdepth_p99",
-    "total_qdepth_p99", "total_qdepth_max", "qdepth_max_imbalance",
+    "total_qdepth_p99", "total_qdepth_mean", "total_qdepth_max", "qdepth_max_imbalance",
     "qdepth_fft_max_all", "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
     "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
     "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
@@ -61,7 +61,7 @@ def train_evolved_baseline():
     df = pd.read_csv(CSV_PATH)
 
     original_len = len(df)
-    df = df[df["Label_Latency_ms"] <= 1500.0]
+    df = df[df["Label_Latency_ms"] <= 3000.0]
     print(f"剔除了 {original_len - len(df)} 筆極端延遲雜訊 (Mininet Artifacts)")
 
     df = add_evolved_features(df)
