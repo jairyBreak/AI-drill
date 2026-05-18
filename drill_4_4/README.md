@@ -44,9 +44,10 @@ python3 realtime_ml_controller.py
 ### 5. 執行視覺化驗證圖表
 在有流量背景的情況下，錄製並產生專業的效能對比圖：
 ```bash
-python3 plot_all_metrics.py [持續秒數]
+python3 plot_all_metrics.py [持續秒數] # 10s 尺度
+python3 plot_1s_metrics.py [持續秒數]  # 1s 尺度
 ```
-*圖表儲存於：`research_results/plots/validation/full_metrics_comparison.png`*
+*圖表儲存於：`research_results/plots/validation/full_metrics_comparison.png`/`research_results/plots/validation/1s_metrics_comparison.png`*
 
 ---
 

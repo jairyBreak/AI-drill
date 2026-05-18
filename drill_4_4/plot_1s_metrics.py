@@ -5,11 +5,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import warnings
+
+warnings.filterwarnings("ignore")
+warnings.simplefilter("ignore", ResourceWarning)
 
 # 導入 1s 控制器邏輯
 from realtime_1s_predictor import Realtime1sPredictor, FEATURE_NAMES
 
-def run_1s_validation(test_duration=60, output_csv="research_results/data/validation/1s_metrics_validation_0.6*5.csv", output_img="research_results/plots/validation/1s_metrics_comparison_0.6*5.png"):
+def run_1s_validation(test_duration=60, output_csv="research_results/data/validation/1s_metrics_validation_0.3*10.csv", output_img="research_results/plots/validation/1s_metrics_comparison_0.3*10.png"):
     print("\n" + "="*100)
     print(f" [1s 尺度預測驗證工具] 開始測試 - 預計時長: {test_duration} 秒")
     print(f" 數據: {output_csv} | 圖表: {output_img}")
@@ -38,7 +42,7 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
             preds = {}
             for k, m in predictor.models.items():
                 p = m.predict(X)[0]
-                if k != "anomaly":
+                if k == "latency":
                     p = np.expm1(p)
                 preds[k] = p
             

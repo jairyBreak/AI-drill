@@ -54,7 +54,8 @@ FEATURE_NAMES = [
     "Mbps_Trend_P2", "Mbps_Trend_P3", "Mbps_Trend_P4", "Mbps_Trend_P5",
     "Total_QDepth_Trend",
     "Total_Actual_Mbps", "Expected_Over_Capacity_Sum",
-    "Expected_Util_P2", "Expected_Util_P3", "Expected_Util_P4", "Expected_Util_P5"
+    "Expected_Util_P2", "Expected_Util_P3", "Expected_Util_P4", "Expected_Util_P5",
+    "Overflow_Intensity", "Queue_Full_And_Over_Cap"
 ]
 
 class Realtime1sPredictor:
@@ -240,6 +241,8 @@ class Realtime1sPredictor:
         row["Group_Imbalance"] = abs((load_a / max(0.01, weight_a)) - (load_b / max(0.01, weight_b)))
         
         row["Over_Capacity_Sum"] = sum(max(0, row[f"src1_port{p}_mbps"] - CAPACITY[p]) for p in PORTS)
+        row["Overflow_Intensity"] = row["Over_Capacity_Sum"] * row["Max_Q_Ratio"]
+        row["Queue_Full_And_Over_Cap"] = row["Over_Capacity_Sum"] * row["Q_Danger_Flag"]
 
         # 4. 時序趨勢 (Trend)
         if self.prev_state is None:
@@ -271,7 +274,7 @@ class Realtime1sPredictor:
                 preds = {}
                 for k, m in self.models.items():
                     p = m.predict(X)[0]
-                    if k != "anomaly":
+                    if k == "latency":
                         p = np.expm1(p)
                     preds[k] = p
                 

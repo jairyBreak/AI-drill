@@ -83,6 +83,10 @@ def add_1s_features(df):
     df["Q_Danger_Flag"] = (df["Max_QDepth"] > 40).astype(int)  # 佇列超過40視為危險
     df["Q_Danger_Count"] = sum((df[f"src1_port{p}_qdepth"] > 40).astype(int) for p in [2, 3, 4, 5])
     
+    # 新增互動特徵 (Overflow Intensity) 針對丟包預測優化
+    df["Overflow_Intensity"] = df["Over_Capacity_Sum"] * df["Max_Q_Ratio"]
+    df["Queue_Full_And_Over_Cap"] = df["Over_Capacity_Sum"] * df["Q_Danger_Flag"]
+    
     # ==========================================
     # 時序趨勢特徵 (Time-Series / Temporal Features)
     # ==========================================
@@ -109,7 +113,8 @@ SELECTED_FEATURES = [
     "Mbps_Trend_P2", "Mbps_Trend_P3", "Mbps_Trend_P4", "Mbps_Trend_P5",
     "Total_QDepth_Trend",
     "Total_Actual_Mbps", "Expected_Over_Capacity_Sum",
-    "Expected_Util_P2", "Expected_Util_P3", "Expected_Util_P4", "Expected_Util_P5"
+    "Expected_Util_P2", "Expected_Util_P3", "Expected_Util_P4", "Expected_Util_P5",
+    "Overflow_Intensity", "Queue_Full_And_Over_Cap"
 ]
 
 def train_1s_models():
@@ -146,32 +151,41 @@ def train_1s_models():
         # 過濾無效標籤
         subset = df[df[label_col] != -1.0].copy()
         X = subset[available_features]
-        # 對標籤進行 log1p 變換以平滑分佈
-        y_log = np.log1p(subset[label_col])
+        
+        # 根據目標決定是否使用 log1p 變換
+        use_log = "latency" in name
+        if use_log:
+            y_target = np.log1p(subset[label_col])
+        else:
+            y_target = subset[label_col]
         
         cv = KFold(n_splits=5, shuffle=True, random_state=42)
         r2_list, mae_list = [], []
         
         for train_idx, test_idx in cv.split(X):
             X_tr, X_te = X.iloc[train_idx], X.iloc[test_idx]
-            y_log_tr, y_te_raw = y_log.iloc[train_idx], subset[label_col].iloc[test_idx]
+            y_target_tr, y_te_raw = y_target.iloc[train_idx], subset[label_col].iloc[test_idx]
             
             model = RandomForestRegressor(**BEST_PARAMS)
-            model.fit(X_tr, y_log_tr)
+            model.fit(X_tr, y_target_tr)
             
             # 預測並還原
-            preds_log = model.predict(X_te)
-            preds_orig = np.expm1(preds_log)
+            preds = model.predict(X_te)
+            if use_log:
+                preds_orig = np.expm1(preds)
+            else:
+                preds_orig = preds
             
-            r2_list.append(r2_score(y_log.iloc[test_idx], preds_log))
+            r2_list.append(r2_score(y_target.iloc[test_idx], preds))
             mae_list.append(mean_absolute_error(y_te_raw, preds_orig))
             
         unit = "%" if "loss" in name else "ms"
-        print(f"[{name:12}] R2(log): {np.mean(r2_list):.4f} | MAE: {np.mean(mae_list):.4f} {unit}")
+        metric_name = "R2(log)" if use_log else "R2(raw)"
+        print(f"[{name:12}] {metric_name}: {np.mean(r2_list):.4f} | MAE: {np.mean(mae_list):.4f} {unit}")
 
         # 訓練最終模型
         final_model = RandomForestRegressor(**BEST_PARAMS)
-        final_model.fit(X, y_log)
+        final_model.fit(X, y_target)
         joblib.dump(final_model, f"rf_model_{name}.pkl")
         print(f"模型已儲存至: rf_model_{name}.pkl")
 
