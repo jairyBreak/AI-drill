@@ -8,9 +8,7 @@ import joblib
 import logging
 import subprocess
 import warnings
-import threading
 import collections
-import re
 from datetime import datetime
 from contextlib import redirect_stdout, redirect_stderr
 
@@ -24,6 +22,7 @@ if P4_UTILS_PATH not in sys.path:
 
 from p4utils.utils.helper import load_topo
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
+from all_controller import TopologyAnalyzer
 
 # 設定日誌 (只顯示 ERROR 以上)
 logging.basicConfig(level=logging.ERROR)
@@ -36,13 +35,18 @@ TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2"
 SRC_ADD = 1
 PORTS = [2, 3, 4, 5]
-CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
-IPERF_PORT = 5202
-IPERF_LOG = "./iperf_server.log"
+CAPACITY = {2: 0.64, 3: 0.80, 4: 0.96, 5: 1.12}
+# Stage 2 — control thresholds
+LATENCY_THRESHOLD_MS = 200.0
+JITTER_THRESHOLD_MS  = 30.0
+LOSS_THRESHOLD_PCT   = 2.0
+COOLDOWN_SEC         = 4
+WEIGHT_MIN           = 1
+WEIGHT_MAX           = 8
+UTIL_THRESHOLD = 0.6
 
 MODELS = {
     "latency": "rf_model_latency_simplified.pkl",
-    "latency_p99": "rf_model_latency_p99_simplified.pkl",
     "loss": "rf_model_loss_simplified.pkl",
     "jitter": "rf_model_jitter_simplified.pkl",
     "anomaly": "rf_model_anomaly_simplified.pkl"
@@ -63,7 +67,8 @@ FEATURE_NAMES = [
     "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
     "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
     "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
-    "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max"
+    "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max",
+    "qdepth_sq", "qdepth_slope"
 ]
 
 class RankECDF:
@@ -84,120 +89,126 @@ class MLController:
         self.ecdf_objs = joblib.load("ecdf_objects.pkl")
         
         self.prev_bytes = {p: 0 for p in PORTS}
-        
-        # 滑動視窗緩存 (對齊 10 秒訓練尺度)
-        self.telemetry_buffer = collections.deque(maxlen=100) # 10s @ 10Hz
-        self.lat_buffer = collections.deque(maxlen=20)       # 10s @ 2Hz
-        self.jit_buffer = collections.deque(maxlen=10)       # 10s @ 1Hz
-        self.loss_buffer = collections.deque(maxlen=10)      # 10s @ 1Hz
-        
-        # 背景採集原始值
-        self._raw_latency = 20.0
-        self._raw_loss = 0.0
-        self._raw_jitter = 0.0
-        
+
+        self.telemetry_buffer = collections.deque(maxlen=100)  # 10s @ 10Hz
+
         # 預測值平滑緩存
-        self.smoothed_latency = 20.0 
+        self.smoothed_latency = 20.0
         self.smoothed_loss = 0.0
         self.smoothed_jitter = 0.0
-        
+
+        self._prev_qdepth_p99 = 0.0
+
         self.init_baseline()
-        self.start_iperf_monitoring()
 
-    @property
-    def real_latency(self):
-        valid = [v for v in self.lat_buffer if v > 0]
-        return np.mean(valid) if valid else self._raw_latency
-
-    @property
-    def real_jitter(self):
-        return np.mean(self.jit_buffer) if self.jit_buffer else self._raw_jitter
-
-    @property
-    def real_loss(self):
-        return np.mean(self.loss_buffer) if self.loss_buffer else self._raw_loss
-
-    def start_iperf_monitoring(self):
-        """啟動 iperf3 監控 (單探針流模式)"""
-        print(f" [系統] 啟動 iperf3 探針解析器 (Port: {IPERF_PORT})...")
-        
-        # 1. 殺掉舊的 iperf3 並清理日誌
-        subprocess.run(["pkill", "-f", "iperf3"], stderr=subprocess.DEVNULL)
-        try:
-            if os.path.exists(IPERF_LOG): os.remove(IPERF_LOG)
-        except Exception as e:
-            pass
-        time.sleep(1.0)
-
-        # 2. 在 h2 啟動 server
-        cmd = ["mx", "h2", "iperf3", "-s", "-i", "1", "-p", str(IPERF_PORT), "--logfile", IPERF_LOG]
-        subprocess.Popen(cmd)
-        
-        # 3. 啟動日誌監聽執行緒
-        self.log_thread = threading.Thread(target=self.bg_log_tail, daemon=True)
-        self.log_thread.start()
-        
-        # 4. 在 h1 啟動 client (單一條 0.1M 流)
-        time.sleep(2.0)
-        self.client_thread = threading.Thread(target=self.bg_iperf_client, daemon=True)
-        self.client_thread.start()
-        
-        # 5. 啟動 Ping
-        self.ping_thread = threading.Thread(target=self.bg_ping, daemon=True)
-        self.ping_thread.start()
-
-    def bg_log_tail(self):
-        """監控 iperf3 日誌檔案並解析單流指標"""
-        pattern = re.compile(r'([\d\.]+)\s+ms\s+[\d\s\w]+/([\d\s]+)\s+\((-?[\d\.]+)%\)')
-        while not os.path.exists(IPERF_LOG): time.sleep(0.5)
-        with open(IPERF_LOG, 'r') as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    time.sleep(0.1)
-                    continue
-                if "sec" in line and "/" in line:
-                    match = pattern.search(line)
-                    if match:
-                        jitter = float(match.group(1))
-                        loss_pct = float(match.group(3))
-                        if loss_pct < 0: loss_pct = 20.0
-                        self._raw_jitter = jitter
-                        self._raw_loss = loss_pct
-                        self.jit_buffer.append(jitter)
-                        self.loss_buffer.append(loss_pct)
-
-    def bg_iperf_client(self):
-        """在 h1 運行 iperf3 client 產生 UDP 探針 (單流 0.1M)"""
-        cmd = ["mx", "h1", "iperf3", "-c", TARGET_IP, "-u", "-b", "0.1M", "-t", "3600", "-i", "1", "-p", str(IPERF_PORT)]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-    def bg_ping(self):
-        """每 0.5 秒執行一次 ping 來獲取真實延遲"""
-        while True:
-            try:
-                output = subprocess.check_output(
-                    ["mx", "h1", "ping", "-c", "1", "-W", "5.0", TARGET_IP],
-                    stderr=subprocess.STDOUT, text=True
-                )
-                match = re.search(r'time=([\d\.]+)\s*ms', output)
-                if match:
-                    val = float(match.group(1))
-                    self._raw_latency = val
-                    self.lat_buffer.append(val)
-                else:
-                    self._raw_latency = -1.0 
-                    self.lat_buffer.append(-1.0)
-            except:
-                self._raw_latency = -1.0
-                self.lat_buffer.append(-1.0)
-            time.sleep(0.5)
+        # Stage 2 — control state
+        self._api_control  = SimpleSwitchThriftAPI(self.topo.get_thrift_port(CONTROL_LEAF))
+        self._hw_rules     = self._load_hw_rules()
+        self._grp_handle   = None
+        self._mbr_handles  = []
+        self._last_adj_time = 0.0
+        self._last_weights  = []
 
     def init_baseline(self):
         with open(os.devnull, 'w') as f, redirect_stdout(f), redirect_stderr(f):
             for p in PORTS:
                 try: self.prev_bytes[p] = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
                 except: pass
+
+    def _load_hw_rules(self):
+        with open('p4app.json') as f:
+            p4app = json.load(f)
+        analyzer = TopologyAnalyzer(p4app, self.topo)
+        _, rules = analyzer.get_ecmp_weights_and_rules(CONTROL_LEAF, TARGET_LEAF)
+        return rules  # 4 dicts: comp_id, num_nhops, ports_and_macs
+
+    def compute_weights(self, feats):
+        scores = []
+        for rule in self._hw_rules:
+            port = rule['ports_and_macs'][0][0]
+            util   = feats.get(f'src1_port{port}_load_util', 0.1)
+            qdepth = feats.get(f'src1_port{port}_qdepth_max', 0)
+            free_bw    = CAPACITY[port] * max(0.0, 1.0 - util)
+            q_headroom = max(0.0, 64 - qdepth) / 64.0
+            scores.append(free_bw * q_headroom + 0.01)
+        min_s = min(scores)
+        return [max(WEIGHT_MIN, min(WEIGHT_MAX, round(s / min_s))) for s in scores]
+
+    def apply_weights(self, weights_list):
+        sel = "w_ecmp_selector"
+        act = "assign_component"
+        thrift_port = self.topo.get_thrift_port(CONTROL_LEAF)
+
+        with open(os.devnull, 'w') as devnull, \
+             redirect_stdout(devnull), redirect_stderr(devnull):
+
+            # 1. Always clear the forwarding table first (removes any entry from
+            #    all_controller.py on first call, or from a prior apply thereafter)
+            subprocess.run(
+                ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
+                input="table_clear w_ecmp_table\n",
+                text=True, capture_output=True
+            )
+            if self._grp_handle is not None:
+                try:
+                    for m in self._mbr_handles:
+                        self._api_control.act_prof_remove_member_from_group(sel, m, self._grp_handle)
+                        self._api_control.act_prof_delete_member(sel, m)
+                    self._api_control.act_prof_delete_group(sel, self._grp_handle)
+                except Exception:
+                    pass
+                self._grp_handle  = None
+                self._mbr_handles = []
+
+            # 2. Build new group
+            grp = self._api_control.act_prof_create_group(sel)
+            mbrs = []
+            for idx, rule in enumerate(self._hw_rules):
+                comp_id = str(rule['comp_id'])
+                for _ in range(weights_list[idx]):
+                    m = self._api_control.act_prof_create_member(sel, act, [comp_id])
+                    self._api_control.act_prof_add_member_to_group(sel, m, grp)
+                    mbrs.append(m)
+            self._grp_handle  = grp
+            self._mbr_handles = mbrs
+
+            # 3. Point forwarding table at the new group
+            subprocess.run(
+                ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
+                input=f"table_indirect_add_with_group w_ecmp_table {TARGET_IP} => {grp}\n",
+                text=True, capture_output=True
+            )
+
+    def control_step(self, feats, preds):
+        if time.time() - self._last_adj_time < COOLDOWN_SEC:
+            return
+        max_util = max(feats.get(f'src1_port{p}_load_util', 0) for p in PORTS)
+        reactive = max_util > UTIL_THRESHOLD or feats.get('qdepth_max_imbalance', 0) > 15
+        trigger = (
+            preds['anomaly'] == 1
+            or reactive
+            or self.smoothed_latency > LATENCY_THRESHOLD_MS
+            or self.smoothed_jitter  > JITTER_THRESHOLD_MS
+            or self.smoothed_loss    > LOSS_THRESHOLD_PCT
+        )
+        if not trigger:
+            return
+        new_weights = self.compute_weights(feats)
+        if new_weights == self._last_weights:
+            return
+        try:
+            self.apply_weights(new_weights)
+        except Exception:
+            self._api_control = SimpleSwitchThriftAPI(self.topo.get_thrift_port(CONTROL_LEAF))
+            self._grp_handle  = None
+            self._mbr_handles = []
+            return
+        self._last_adj_time = time.time()
+        self._last_weights  = new_weights
+        port_weights = {rule['ports_and_macs'][0][0]: w
+                        for rule, w in zip(self._hw_rules, new_weights)}
+        print(f"\n[CTRL] Weight change → " +
+              "  ".join(f"s{p-1}:{w}" for p, w in sorted(port_weights.items())))
 
     def collect_window(self, duration=1.0, interval=0.1):
         """採集新樣本並更新滑動視窗"""
@@ -235,17 +246,17 @@ class MLController:
     def get_current_weights(self):
         weights = {p: 1 for p in PORTS} 
         try:
-            entries = self.api_telemetry.table_get_entries("w_ecmp_table", False)
+            entries = self._api_control.table_get_entries("w_ecmp_table", False)
             if not entries: return weights
             grp_handle = entries[0].action_data.action_params[0]
-            grp_info = self.api_telemetry.act_prof_get_group("w_ecmp_selector", grp_handle)
+            grp_info = self._api_control.act_prof_get_group("w_ecmp_selector", grp_handle)
             members = grp_info.member_handles
             comp_counts = {}
             for m_handle in members:
-                mbr = self.api_telemetry.act_prof_get_member("w_ecmp_selector", m_handle)
+                mbr = self._api_control.act_prof_get_member("w_ecmp_selector", m_handle)
                 comp_id = int(mbr.action_params[0])
                 comp_counts[comp_id] = comp_counts.get(comp_id, 0) + 1
-            nh_entries = self.api_telemetry.table_get_entries("ecmp_group_to_nhop", False)
+            nh_entries = self._api_control.table_get_entries("ecmp_group_to_nhop", False)
             for entry in nh_entries:
                 c_id = int(entry.match_key[0].data)
                 port = int(entry.action_data.action_params[1])
@@ -289,6 +300,9 @@ class MLController:
         feats["total_qdepth_p99"] = np.sum(q_p99s)
         feats["total_qdepth_max"] = np.sum(q_maxes)
         feats["qdepth_max_imbalance"] = np.max(q_maxes) - np.min(q_maxes)
+        feats["qdepth_sq"] = feats["total_qdepth_p99"] ** 2
+        feats["qdepth_slope"] = feats["total_qdepth_p99"] - self._prev_qdepth_p99
+        self._prev_qdepth_p99 = feats["total_qdepth_p99"]
         
         fft_mags = []
         for p in PORTS:
@@ -332,20 +346,20 @@ class MLController:
                     if k != "anomaly": p = np.expm1(p)
                     preds[k] = p
                 
-                self.smoothed_latency = (0.4 * preds['latency']) + (0.6 * self.smoothed_latency)
-                self.smoothed_jitter = (0.4 * preds['jitter']) + (0.6 * self.smoothed_jitter)
-                self.smoothed_loss = (0.4 * preds['loss']) + (0.6 * self.smoothed_loss)
+                self.smoothed_latency = (0.6 * preds['latency']) + (0.4 * self.smoothed_latency)
+                self.smoothed_jitter = (0.6 * preds['jitter']) + (0.4 * self.smoothed_jitter)
+                self.smoothed_loss = (0.6 * preds['loss']) + (0.4 * self.smoothed_loss)
                 
                 status = "NORMAL" if preds['anomaly'] == 0 else "\033[91mANOMALY\033[0m"
-                ping_str = f"{self.real_latency:5.1f}ms" if self.real_latency > 0 else "\033[91mTIMEOUT\033[0m"
-                
-                sys.stdout.write("\033[K") 
+
+                sys.stdout.write("\033[K")
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] {status:7} | "
-                      f"Lat: {self.smoothed_latency:5.1f}/{ping_str} | "
-                      f"Jit: {self.smoothed_jitter:4.1f}/{self.real_jitter:4.1f}ms | "
-                      f"Loss: {self.smoothed_loss:4.1f}/{self.real_loss:4.1f}% | "
+                      f"Lat: {self.smoothed_latency:6.1f}ms | "
+                      f"Jit: {self.smoothed_jitter:5.1f}ms | "
+                      f"Loss: {self.smoothed_loss:4.1f}% | "
                       f"Util: {feats['Total_Util_Sum']:4.2f}", end='\r')
                 sys.stdout.flush()
+                self.control_step(feats, preds)
         except KeyboardInterrupt: print("\n停止。")
 
 if __name__ == "__main__":

@@ -33,7 +33,7 @@ CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2" 
 DURATION = 10
-CURRENT_CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
+CURRENT_CAPACITY = {2: 0.8, 3: 1.0, 4: 1.2, 5: 1.4}
 
 def get_params(iteration_id):
     """強化版採樣邏輯：極大化最優權重比例 (50%)，確保模型學會『2:3 即低延遲』"""
@@ -72,7 +72,13 @@ def get_params(iteration_id):
         weights = random.choice([[8, 1], [1, 8], [7, 2], [2, 7]])
         return weights, load, random.randint(5, 10)
 
+_active_grp_handle = None
+_active_mbr_handles = []
+_active_thrift_port = None
+
 def apply_real_group_weights(ingress_leaf, target_leaf, target_ip, group_weights):
+    global _active_grp_handle, _active_mbr_handles, _active_thrift_port
+
     with open('p4app.json', 'r') as f:
         p4app_data = json.load(f)
     topo = load_topo("topology.json")
@@ -86,20 +92,38 @@ def apply_real_group_weights(ingress_leaf, target_leaf, target_ip, group_weights
 
     selector_name = "w_ecmp_selector"
     action_name = "assign_component"
+
+    # Clean up previous group before creating a new one
+    if _active_grp_handle is not None:
+        try:
+            for mbr in _active_mbr_handles:
+                api.act_prof_remove_member_from_group(selector_name, mbr, _active_grp_handle)
+                api.act_prof_delete_member(selector_name, mbr)
+            api.act_prof_delete_group(selector_name, _active_grp_handle)
+        except Exception:
+            pass
+        _active_grp_handle = None
+        _active_mbr_handles = []
+
     try:
         grp_handle = api.act_prof_create_group(selector_name)
+        mbr_handles = []
         for idx, rule in enumerate(hardware_rules):
             comp_id = str(rule['comp_id'])
             weight = group_weights[idx]
             for _ in range(weight):
                 mbr_handle = api.act_prof_create_member(selector_name, action_name, [comp_id])
                 api.act_prof_add_member_to_group(selector_name, mbr_handle, grp_handle)
+                mbr_handles.append(mbr_handle)
+        _active_grp_handle = grp_handle
+        _active_mbr_handles = mbr_handles
+        _active_thrift_port = thrift_port
     except Exception:
         return {}
 
     cli_cmds = ["table_clear w_ecmp_table", f"table_indirect_add_with_group w_ecmp_table {target_ip} => {grp_handle}"]
     subprocess.run(['simple_switch_CLI', '--thrift-port', str(thrift_port)], input="\n".join(cli_cmds) + "\n", text=True, capture_output=True)
-    
+
     port_weights = {}
     for idx, rule in enumerate(hardware_rules):
         weight = group_weights[idx]
