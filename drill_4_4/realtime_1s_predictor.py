@@ -30,8 +30,8 @@ logging.basicConfig(level=logging.ERROR)
 # ==========================================
 CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
-PORTS = [2, 3, 4, 5]
-CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
+PORTS = list(range(2, 10))
+CAPACITY = {2: 0.8, 3: 0.8, 4: 0.8, 5: 0.8, 6: 1.2, 7: 1.2, 8: 1.2, 9: 1.2}
 SRC_ID = 1
 
 MODELS = {
@@ -40,23 +40,22 @@ MODELS = {
     "anomaly": "rf_model_anomaly_1s.pkl"
 }
 
-# 完整的 1s 模型特徵清單 (已移除 acc_q_delay_us，與 train_1s_models.py 完全一致)
+# 完整的 1s 模型特徵清單
 FEATURE_NAMES = [
     "Is_Rehash_Event", "Time_Since_Last_Rehash_s", "Rehash_Impact",
-    "src1_port2_qdepth", "src1_port3_qdepth", "src1_port4_qdepth", "src1_port5_qdepth",
-    "src1_port2_mbps", "src1_port3_mbps", "src1_port4_mbps", "src1_port5_mbps",
-    "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
-    "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance", 
     "Max_QDepth", "Total_QDepth", "QDepth_Imbalance",
     "Over_Capacity_Sum", "Max_Q_Ratio", "Q_Danger_Flag", "Q_Danger_Count",
-    "QDepth_Trend_P2", "QDepth_Trend_P3", "QDepth_Trend_P4", "QDepth_Trend_P5",
-    "Mbps_Trend_P2", "Mbps_Trend_P3", "Mbps_Trend_P4", "Mbps_Trend_P5",
     "Total_QDepth_Trend",
     "Total_Actual_Mbps", "Expected_Over_Capacity_Sum",
-    "Expected_Util_P2", "Expected_Util_P3", "Expected_Util_P4", "Expected_Util_P5",
     "Overflow_Intensity", "Queue_Full_And_Over_Cap"
 ]
+for p in range(2, 10):
+    FEATURE_NAMES.extend([
+        f"src1_port{p}_qdepth", f"src1_port{p}_mbps", f"Weight_Port{p}",
+        f"Norm_Load_P{p}", f"QDepth_Trend_P{p}", f"Mbps_Trend_P{p}",
+        f"Expected_Util_P{p}"
+    ])
 
 class Realtime1sPredictor:
     def __init__(self):
@@ -234,10 +233,10 @@ class Realtime1sPredictor:
         row["Q_Danger_Count"] = sum(1 for q in qdepths if q > 40)
         
         # 群組不平衡
-        load_a = row["src1_port2_mbps"] + row["src1_port3_mbps"]
-        weight_a = row["Weight_Port2"] + row["Weight_Port3"]
-        load_b = row["src1_port4_mbps"] + row["src1_port5_mbps"]
-        weight_b = row["Weight_Port4"] + row["Weight_Port5"]
+        load_a = sum(row[f"src1_port{p}_mbps"] for p in [2, 3, 4, 5])
+        weight_a = sum(row[f"Weight_Port{p}"] for p in [2, 3, 4, 5])
+        load_b = sum(row[f"src1_port{p}_mbps"] for p in [6, 7, 8, 9])
+        weight_b = sum(row[f"Weight_Port{p}"] for p in [6, 7, 8, 9])
         row["Group_Imbalance"] = abs((load_a / max(0.01, weight_a)) - (load_b / max(0.01, weight_b)))
         
         row["Over_Capacity_Sum"] = sum(max(0, row[f"src1_port{p}_mbps"] - CAPACITY[p]) for p in PORTS)

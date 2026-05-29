@@ -30,7 +30,7 @@ TARGET_IP = "10.0.2.2"
 IPERF_PORT = 5201
 IPERF_LOG = "rolling_iperf.log"
 SERVER_LOG = "rolling_server.log"
-PORTS = [2, 3, 4, 5]
+PORTS = list(range(2, 10))
 SRC_ID = 1
 
 class RollingDataBrain:
