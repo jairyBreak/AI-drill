@@ -11,29 +11,29 @@
       ["h1", "l1"], ["h2", "l2"], ["h3", "l3"], ["h4", "l4"],
       ["h5", "l5"], ["h6", "l6"], ["h7", "l7"], ["h8", "l8"],
 
-      ["l1", "s1", {"bw": 1, "max_queue_size": 256}], ["l1", "s2", {"bw": 1, "max_queue_size": 256}], ["l1", "s3", {"bw": 1, "max_queue_size": 256}], ["l1", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l1", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l1", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l1", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l1", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l1", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l1", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l1", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l1", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l1", "s5", {"bw": 1, "max_queue_size": 256}], ["l1", "s6", {"bw": 1, "max_queue_size": 256}], ["l1", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l1", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l2", "s1", {"bw": 1, "max_queue_size": 256}], ["l2", "s2", {"bw": 1, "max_queue_size": 256}], ["l2", "s3", {"bw": 1, "max_queue_size": 256}], ["l2", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l2", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l2", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l2", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l2", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l2", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l2", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l2", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l2", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l2", "s5", {"bw": 1, "max_queue_size": 256}], ["l2", "s6", {"bw": 1, "max_queue_size": 256}], ["l2", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l2", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l3", "s1", {"bw": 1, "max_queue_size": 256}], ["l3", "s2", {"bw": 1, "max_queue_size": 256}], ["l3", "s3", {"bw": 1, "max_queue_size": 256}], ["l3", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l3", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l3", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l3", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l3", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l3", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l3", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l3", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l3", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l3", "s5", {"bw": 1, "max_queue_size": 256}], ["l3", "s6", {"bw": 1, "max_queue_size": 256}], ["l3", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l3", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l4", "s1", {"bw": 1, "max_queue_size": 256}], ["l4", "s2", {"bw": 1, "max_queue_size": 256}], ["l4", "s3", {"bw": 1, "max_queue_size": 256}], ["l4", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l4", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l4", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l4", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l4", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l4", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l4", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l4", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l4", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l4", "s5", {"bw": 1, "max_queue_size": 256}], ["l4", "s6", {"bw": 1, "max_queue_size": 256}], ["l4", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l4", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l5", "s1", {"bw": 1, "max_queue_size": 256}], ["l5", "s2", {"bw": 1, "max_queue_size": 256}], ["l5", "s3", {"bw": 1, "max_queue_size": 256}], ["l5", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l5", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l5", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l5", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l5", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l5", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l5", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l5", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l5", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l5", "s5", {"bw": 1, "max_queue_size": 256}], ["l5", "s6", {"bw": 1, "max_queue_size": 256}], ["l5", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l5", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l6", "s1", {"bw": 1, "max_queue_size": 256}], ["l6", "s2", {"bw": 1, "max_queue_size": 256}], ["l6", "s3", {"bw": 1, "max_queue_size": 256}], ["l6", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l6", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l6", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l6", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l6", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l6", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l6", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l6", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l6", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l6", "s5", {"bw": 1, "max_queue_size": 256}], ["l6", "s6", {"bw": 1, "max_queue_size": 256}], ["l6", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l6", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l7", "s1", {"bw": 1, "max_queue_size": 256}], ["l7", "s2", {"bw": 1, "max_queue_size": 256}], ["l7", "s3", {"bw": 1, "max_queue_size": 256}], ["l7", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l7", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l7", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l7", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l7", "s8", {"bw": 1.5, "max_queue_size": 256}],
+      ["l7", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l7", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l7", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l7", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l7", "s5", {"bw": 1, "max_queue_size": 256}], ["l7", "s6", {"bw": 1, "max_queue_size": 256}], ["l7", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l7", "s8", {"bw": 1.2, "max_queue_size": 256}],
 
-      ["l8", "s1", {"bw": 1, "max_queue_size": 256}], ["l8", "s2", {"bw": 1, "max_queue_size": 256}], ["l8", "s3", {"bw": 1, "max_queue_size": 256}], ["l8", "s4", {"bw": 1, "max_queue_size": 256}],
-      ["l8", "s5", {"bw": 1.5, "max_queue_size": 256}], ["l8", "s6", {"bw": 1.5, "max_queue_size": 256}], ["l8", "s7", {"bw": 1.5, "max_queue_size": 256}], ["l8", "s8", {"bw": 1.5, "max_queue_size": 256}]
+      ["l8", "s1", {"bw": 0.6, "max_queue_size": 256}], ["l8", "s2", {"bw": 0.6, "max_queue_size": 256}], ["l8", "s3", {"bw": 0.8, "max_queue_size": 256}], ["l8", "s4", {"bw": 0.8, "max_queue_size": 256}],
+      ["l8", "s5", {"bw": 1, "max_queue_size": 256}], ["l8", "s6", {"bw": 1, "max_queue_size": 256}], ["l8", "s7", {"bw": 1.2, "max_queue_size": 256}], ["l8", "s8", {"bw": 1.2, "max_queue_size": 256}]
     ],
     "hosts": {
       "h1": { "ip": "10.0.1.1/24", "gw": "10.0.1.254" },

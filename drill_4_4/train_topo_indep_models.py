@@ -17,7 +17,7 @@ CSV_4PORT = "bruh/rolling_training_dataset_1.csv"
 CSV_8PORT = "research_results/data/datasets/rolling_training_dataset.csv"
 
 CAPACITY_4PORT = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
-CAPACITY_8PORT = {2: 0.8, 3: 0.8, 4: 0.8, 5: 0.8, 6: 1.2, 7: 1.2, 8: 1.2, 9: 1.2}
+CAPACITY_8PORT = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64, 6: 0.8, 7: 0.8, 8: 0.96, 9: 0.96}
 
 BEST_PARAMS = dict(
     n_estimators=100,       # 減少樹的數量以提升即時推論速度 (1s 尺度需要更快的推論)
@@ -126,22 +126,8 @@ def train_models():
     
     all_dfs = []
     
-    # 1. 處理 4-Port 資料集 (主要備份檔)
-    if os.path.exists(CSV_4PORT):
-        print(f"載入 4-port 備份資料集: {CSV_4PORT}")
-        df_4_32, df_4_56 = load_and_split_csv(CSV_4PORT)
-        print(f"  - 讀取到 {len(df_4_32)} 筆 4-port 格式樣本，{len(df_4_56)} 筆 8-port 格式樣本")
-        
-        if len(df_4_32) > 0:
-            print("  - 正在轉換 4-port 樣本至拓樸無關格式...")
-            df_4_32_transformed = transform_to_topo_independent(df_4_32, [2, 3, 4, 5], CAPACITY_4PORT)
-            all_dfs.append(df_4_32_transformed)
-        if len(df_4_56) > 0:
-            print("  - 正在轉換 4-port 檔案中的 8-port 樣本至拓樸無關格式...")
-            df_4_56_transformed = transform_to_topo_independent(df_4_56, list(range(2, 10)), CAPACITY_8PORT)
-            all_dfs.append(df_4_56_transformed)
-    else:
-        print(f"警告: 找不到 4-port 備份資料集 {CSV_4PORT}")
+    # 1. 跳過 4-Port 資料集 (依據使用者要求只訓練 8-port)
+    print("跳過 4-port 資料集，只使用 8-port 資料集...")
         
     # 2. 處理 8-Port 資料集 (當前實驗產生的)
     if os.path.exists(CSV_8PORT):

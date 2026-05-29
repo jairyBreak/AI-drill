@@ -38,11 +38,17 @@ def main():
         net.addLink(f'h{i}', f'l{i}')
 
     # Switch 間連接
-    # s1-s4 bandwidth = 1.0 (scaled to 1.0 here, matching p4app.json)
-    # s5-s8 bandwidth = 1.5 (scaled to 1.5 here, matching p4app.json)
+    # s1,s2: bw=0.6 | s3,s4: bw=0.8 | s5,s6: bw=1.0 | s7,s8: bw=1.2
     for l in range(1, 9):
         for s in range(1, 9):
-            bw = 1.5 if s >= 5 else 1.0
+            if s in [1, 2]:
+                bw = 0.6
+            elif s in [3, 4]:
+                bw = 0.8
+            elif s in [5, 6]:
+                bw = 1.0
+            else:
+                bw = 1.2
             net.addLink(f'l{l}', f's{s}', bw=bw, max_queue_size=256)
 
     # --- 對應 JSON: "topology" 策略設定 ---
