@@ -1,10 +1,12 @@
 import sys
 import os
+import re
 import time
 import json
 import pandas as pd
 import numpy as np
 import joblib
+import threading
 import logging
 import subprocess
 import warnings
@@ -33,6 +35,8 @@ logging.basicConfig(level=logging.ERROR)
 CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2"
+IPERF_PORT = 5201
+IPERF_LOG = "/tmp/iperf3_probe.log"
 SRC_ADD = 1
 PORTS = [2, 3, 4, 5]
 CAPACITY = {2: 0.64, 3: 0.80, 4: 0.96, 5: 1.12}
@@ -57,13 +61,12 @@ FEATURE_NAMES = [
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
     "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
     "idx_load_balance", "mbps_imbalance", "max_qdepth_p99",
-    "total_qdepth_p99", "total_qdepth_mean", "total_qdepth_max", "qdepth_max_imbalance",
+    "total_qdepth_p99", "total_qdepth_max", "qdepth_max_imbalance",
     "qdepth_fft_max_all", "Weight_Port2", "Weight_Port3", "Weight_Port4", "Weight_Port5",
     "src1_port3_mbps_cv", "src1_port5_mbps_cv", "src1_port4_mbps_cv", "src1_port2_mbps_cv",
     "src1_port5_load_util", "src1_port3_load_util", "src1_port4_load_util", "src1_port2_load_util",
     "src1_port3_qdepth_max", "src1_port5_qdepth_max", "src1_port4_qdepth_max", "src1_port2_qdepth_max",
-    "qdepth_danger_ratio_port2", "qdepth_danger_ratio_port3","qdepth_danger_ratio_port4","qdepth_danger_ratio_port5",        
-    "qdepth_oscillation"
+    "qdepth_sq", "qdepth_slope"
 ]
 
 class RankECDF:
@@ -94,7 +97,22 @@ class MLController:
 
         self._prev_qdepth_p99 = 0.0
 
+        self._raw_latency = -1.0
+        self._raw_jitter  = 0.0
+        self._raw_loss    = 0.0
+        self.lat_buffer   = collections.deque(maxlen=20)
+        self.jit_buffer   = collections.deque(maxlen=20)
+        self.loss_buffer  = collections.deque(maxlen=20)
+
         self.init_baseline()
+
+        self._api_control   = SimpleSwitchThriftAPI(self.topo.get_thrift_port(CONTROL_LEAF))
+        self._hw_rules      = self._load_hw_rules()
+        self._grp_handle    = None
+        self._mbr_handles   = []
+        self._last_adj_time = 0.0
+        self._last_weights  = []
+
         self.start_iperf_monitoring()
 
     @property
@@ -341,42 +359,32 @@ class MLController:
         for p in PORTS:
             feats[f'Weight_Port{p}'] = current_weights.get(p, 1)
 
-        q_p99s, m_means, m_cvs, q_maxes, utils, q_cvs, q_means = [], [], [], [], [], [], []
-        danger_threshold = 40.0
-        
+        q_p99s, m_means, m_cvs, q_maxes, utils = [], [], [], [], []
+
         for p in PORTS:
             q, m = df[f'qdepth_{p}'].values, df[f'mbps_{p}'].values
             p99, m_mean, m_std = np.percentile(q, 99), np.mean(m), np.std(m)
             m_cv = m_std / m_mean if m_mean > 0.001 else 0
             q_max = np.max(q)
-            q_mean_val = np.mean(q)
             util = m_mean / CAPACITY[p]
-            
-            # 佇列危險比例
-            feats[f'qdepth_danger_ratio_port{p}'] = np.mean(q > danger_threshold) if len(q) > 0 else 0.0
-            
-            # 佇列變異係數 (用於計算震盪指標)
-            q_cv = np.std(q) / q_mean_val if q_mean_val > 0.1 else 0.0
-            q_cvs.append(q_cv)
-            q_means.append(q_mean_val)
-            
+
             feats[f'src1_port{p}_qdepth_max'] = q_max
             feats[f'src1_port{p}_mbps_cv'] = m_cv
             feats[f'src1_port{p}_load_util'] = util
             feats[f'Norm_Load_P{p}'] = m_mean / max(1, feats[f'Weight_Port{p}'])
-            
+
             q_p99s.append(p99); m_means.append(m_mean); m_cvs.append(m_cv); q_maxes.append(q_max); utils.append(util)
 
         feats["Total_Util_Sum"] = sum(utils)
         feats["Max_Util_Diff"] = max(utils) - min(utils)
-        
-        # 全網佇列震盪與平均指標
-        feats["qdepth_oscillation"] = np.mean(q_cvs) if q_cvs else 0.0
-        feats["total_qdepth_mean"] = sum(q_means)
+
         feats["total_qdepth_max"] = sum(q_maxes)
         feats["total_qdepth_p99"] = sum(q_p99s)
         feats["max_qdepth_p99"] = max(q_p99s) if q_p99s else 0.0
         feats["qdepth_max_imbalance"] = max(q_maxes) - min(q_maxes) if q_maxes else 0.0
+        feats["qdepth_sq"]    = feats["total_qdepth_p99"] ** 2
+        feats["qdepth_slope"] = feats["total_qdepth_p99"] - self._prev_qdepth_p99
+        self._prev_qdepth_p99 = feats["total_qdepth_p99"]
 
         load_a = m_means[0] + m_means[1]
         weight_a = feats['Weight_Port2'] + feats['Weight_Port3']
@@ -436,6 +444,7 @@ class MLController:
                       f"Jit: {self.smoothed_jitter:4.1f}/{self.real_jitter:4.1f}ms | "
                       f"Loss: {self.smoothed_loss:4.1f}/{self.real_loss:4.1f}% | "
                       f"Util: {feats['Total_Util_Sum']:4.2f}")
+                self.control_step(feats, preds)
         except KeyboardInterrupt: print("\n停止。")
 
 if __name__ == "__main__":

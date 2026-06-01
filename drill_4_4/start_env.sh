@@ -3,7 +3,7 @@
 # ==========================================
 # 系統變數設定
 # ==========================================
-VENV_PYTHON="/home/p4/src/p4dev-python-venv/bin/python3"
+VENV_PYTHON="$(which python3)"
 P4RUN_CMD="sudo env PATH=$PATH $(which p4run)"
 CONTROLLER_CMD="$VENV_PYTHON all_controller.py"
 RATE_LIMITER_CMD="sudo -n env PATH=$PATH $VENV_PYTHON rate_limiter.py"
