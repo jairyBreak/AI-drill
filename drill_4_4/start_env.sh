@@ -42,11 +42,15 @@ sudo -v
 # 核心技巧：子殼層 (Subshell) 延遲啟動
 # ==========================================
 (
-    sleep 10
-    echo -e "\n[排程] 10 sec waiting... open all_controller.py"
+    sleep 5
+    echo -e "\n[排程] 等待所有交換機 Thrift 端口就緒..."
+    for port in $(seq 9090 9105); do
+        until nc -z 127.0.0.1 $port 2>/dev/null; do sleep 1; done
+    done
+
+    echo -e "\n[排程] 啟動 all_controller.py"
     $CONTROLLER_CMD > controller_output.log 2>&1 &
 
-    sleep 3
     echo -e "\n[排程] 正在背景套用 rate_limiter.py"
     $RATE_LIMITER_CMD > rate_limiter_output.log 2>&1
     if [ $? -ne 0 ]; then

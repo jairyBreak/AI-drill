@@ -30,7 +30,7 @@ class SwitchRateLimiter:
         
         try:
             self.api = SimpleSwitchThriftAPI(self.thrift_port)
-        except Exception as e:
+        except BaseException as e:
             logging.error(f"無法連線至 {self.switch_name} (Thrift Port: {self.thrift_port}): {e}")
 
     def apply_link_limit(self, neighbor: str, bw_mbps: float, packet_size_bits: int, max_queue_pkts: int):

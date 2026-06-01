@@ -147,11 +147,12 @@ class LeafController:
     def __init__(self, switch_name, topo_json_obj):
         self.switch_name = switch_name
         self.thrift_port = topo_json_obj.get_thrift_port(switch_name)
-        self.cli_command_buffer = []  # 新增：CLI 指令緩衝區
+        self.cli_command_buffer = []
+        self.api = None
         try:
             self.api = SimpleSwitchThriftAPI(self.thrift_port)
-        except Exception:
-            pass 
+        except BaseException:
+            pass
 
     def buffer_cli_cmd(self, command):
         """將指令加入緩衝區，不立即執行"""
@@ -177,6 +178,8 @@ class LeafController:
         self.cli_command_buffer.clear()
 
     def set_w_ecmp_weights(self, target_ip, weights_list, hardware_rules):
+        if not self.api:
+            return
         weight_str = ":".join(map(str, weights_list))
         print(f"  -> 目標 IP: {target_ip} | 動態權重 = {weight_str} | 生成路徑: {len(hardware_rules)} 條")
         

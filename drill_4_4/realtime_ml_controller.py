@@ -38,8 +38,9 @@ TARGET_IP = "10.0.2.2"
 IPERF_PORT = 5201
 IPERF_LOG = "/tmp/iperf3_probe.log"
 SRC_ADD = 1
-PORTS = [2, 3, 4, 5]
-CAPACITY = {2: 0.64, 3: 0.80, 4: 0.96, 5: 1.12}
+PORTS = [2, 3, 4, 5, 6, 7, 8, 9]
+CAPACITY = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
+            6: 0.80, 7: 0.80, 8: 0.96, 9: 0.96}
 # Stage 2 — control thresholds
 LATENCY_THRESHOLD_MS = 200.0
 JITTER_THRESHOLD_MS  = 30.0
@@ -132,8 +133,9 @@ class MLController:
         """啟動 iperf3 監控 (單探針流模式)"""
         print(f" [系統] 啟動 iperf3 探針解析器 (Port: {IPERF_PORT})...")
         
-        # 1. 殺掉舊的 iperf3 並清理日誌
-        subprocess.run(["pkill", "-f", "iperf3"], stderr=subprocess.DEVNULL)
+        # 1. 殺掉本控制器的舊探針，不影響其他 iperf3 流
+        subprocess.run(["pkill", "-f", os.path.basename(IPERF_LOG)], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-f", "iperf3.*0\\.01M"], stderr=subprocess.DEVNULL)
         try:
             if os.path.exists(IPERF_LOG): os.remove(IPERF_LOG)
         except Exception as e:
@@ -237,42 +239,44 @@ class MLController:
         with open(os.devnull, 'w') as devnull, \
              redirect_stdout(devnull), redirect_stderr(devnull):
 
-            # 1. Always clear the forwarding table first (removes any entry from
-            #    all_controller.py on first call, or from a prior apply thereafter)
-            subprocess.run(
-                ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
-                input="table_clear w_ecmp_table\n",
-                text=True, capture_output=True
-            )
             if self._grp_handle is not None:
+                # Subsequent calls: rewire members inside the existing group so the
+                # table entry never changes and other l1 routes are undisturbed.
                 try:
                     for m in self._mbr_handles:
                         self._api_control.act_prof_remove_member_from_group(sel, m, self._grp_handle)
                         self._api_control.act_prof_delete_member(sel, m)
-                    self._api_control.act_prof_delete_group(sel, self._grp_handle)
                 except Exception:
                     pass
-                self._grp_handle  = None
                 self._mbr_handles = []
-
-            # 2. Build new group
-            grp = self._api_control.act_prof_create_group(sel)
-            mbrs = []
-            for idx, rule in enumerate(self._hw_rules):
-                comp_id = str(rule['comp_id'])
-                for _ in range(weights_list[idx]):
-                    m = self._api_control.act_prof_create_member(sel, act, [comp_id])
-                    self._api_control.act_prof_add_member_to_group(sel, m, grp)
-                    mbrs.append(m)
-            self._grp_handle  = grp
-            self._mbr_handles = mbrs
-
-            # 3. Point forwarding table at the new group
-            subprocess.run(
-                ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
-                input=f"table_indirect_add_with_group w_ecmp_table {TARGET_IP} => {grp}\n",
-                text=True, capture_output=True
-            )
+                for idx, rule in enumerate(self._hw_rules):
+                    comp_id = str(rule['comp_id'])
+                    for _ in range(weights_list[idx]):
+                        m = self._api_control.act_prof_create_member(sel, act, [comp_id])
+                        self._api_control.act_prof_add_member_to_group(sel, m, self._grp_handle)
+                        self._mbr_handles.append(m)
+            else:
+                # First call: replace all_controller.py's entry for TARGET_IP only.
+                # table_clear is unavoidable here, but runs once and only once.
+                subprocess.run(
+                    ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
+                    input="table_clear w_ecmp_table\n",
+                    text=True, capture_output=True
+                )
+                grp = self._api_control.act_prof_create_group(sel)
+                self._mbr_handles = []
+                for idx, rule in enumerate(self._hw_rules):
+                    comp_id = str(rule['comp_id'])
+                    for _ in range(weights_list[idx]):
+                        m = self._api_control.act_prof_create_member(sel, act, [comp_id])
+                        self._api_control.act_prof_add_member_to_group(sel, m, grp)
+                        self._mbr_handles.append(m)
+                self._grp_handle = grp
+                subprocess.run(
+                    ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
+                    input=f"table_indirect_add_with_group w_ecmp_table {TARGET_IP} => {grp}\n",
+                    text=True, capture_output=True
+                )
 
     def control_step(self, feats, preds):
         if time.time() - self._last_adj_time < COOLDOWN_SEC:
@@ -300,8 +304,10 @@ class MLController:
             return
         self._last_adj_time = time.time()
         self._last_weights  = new_weights
-        port_weights = {rule['ports_and_macs'][0][0]: w
-                        for rule, w in zip(self._hw_rules, new_weights)}
+        port_weights = {}
+        for rule, w in zip(self._hw_rules, new_weights):
+            for port, _ in rule['ports_and_macs']:
+                port_weights[port] = w
         print(f"\n[CTRL] Weight change → " +
               "  ".join(f"s{p-1}:{w}" for p, w in sorted(port_weights.items())))
 

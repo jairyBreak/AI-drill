@@ -14,12 +14,22 @@ TARGET_IP   = "10.0.2.2"
 TARGET_HOST = "h2"
 INTERVAL_S  = 10
 
-PORTS    = [5100, 5101, 5102, 5103, 5104, 5105]
-FLOW_BWS = ["0.60M", "0.24M", "0.20M", "0.16M", "0.12M", "0.08M"]   # total = 1.40M
-STAGGER  = 0.5   # seconds between starting each client (desync TCP timers)
+PORTS    = [5100, 5101, 5102, 5103, 5104, 5105,
+            5106, 5107, 5108, 5109, 5110, 5111,
+            5112, 5113, 5114, 5115, 5116, 5117]
+FLOW_BWS = [
+    "0.40M", "0.40M", "0.40M",
+    "0.24M", "0.24M", "0.24M",
+    "0.16M", "0.16M", "0.16M", "0.16M",
+    "0.08M", "0.08M", "0.08M", "0.08M",
+    "0.06M", "0.06M", "0.06M", "0.06M",
+]  # total = 3.12M
+STAGGER  = 0.3   # seconds between starting each client (desync TCP timers)
 
-SPINE_CAP   = {2: 0.64, 3: 0.80, 4: 0.96, 5: 1.12}  # Mbps soft-caps (matches rate_limiter ×0.8)
-SPINE_NAMES = {2: "s1",  3: "s2",  4: "s3",  5: "s4"}
+SPINE_CAP   = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
+               6: 0.80, 7: 0.80, 8: 0.96, 9: 0.96}
+SPINE_NAMES = {2: "s1", 3: "s2", 4: "s3", 5: "s4",
+               6: "s5", 7: "s6", 8: "s7", 9: "s8"}
 L1_THRIFT   = 9090  # queue depth lives here (egress congestion point)
 L2_THRIFT   = 9091  # byte counters live here (ML controller reads same source)
 
@@ -110,7 +120,7 @@ def _start_servers():
 def _start_clients(assignment, duration, plot_dir=None):
     """
     assignment: [(port, bw_str), ...]
-    Clients are started with STAGGER seconds between each to desync timers.
+    Clients are started with STAGGER seconds between each to desync TCP timers.
     Returns (procs, log_paths).
     """
     procs, logs = [], []
@@ -160,17 +170,17 @@ def _parse_single(path):
 
 def _plot(series, rotation_times):
     import matplotlib.pyplot as plt
-    colors = plt.cm.tab10.colors
+    colors = plt.cm.tab20.colors
     fig, ax = plt.subplots(figsize=(14, 5))
     for i, (label, ts, mbps) in enumerate(series):
         if ts:
-            ax.plot(ts, mbps, label=label, color=colors[i % 10], linewidth=1.2)
+            ax.plot(ts, mbps, label=label, color=colors[i % 20], linewidth=1.2)
     for rt in rotation_times:
         ax.axvline(rt, color="gray", linestyle="--", linewidth=0.8, alpha=0.6)
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Throughput (Mbps)")
     ax.set_title("iperf3 flow bitrates")
-    ax.legend(loc="upper right", fontsize=8)
+    ax.legend(loc="upper right", fontsize=7)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     out = "traffic_plot.png"
@@ -321,9 +331,9 @@ def main():
     parser = argparse.ArgumentParser(description="iperf3 traffic generator h1→h2")
     grp = parser.add_mutually_exclusive_group()
     grp.add_argument("--static",  action="store_true",
-                     help="4 flows (1 heavy @ 0.12M + 3 light @ 0.06M), fixed, ~0.3M total")
+                     help="18 flows (fixed BW assignment)")
     grp.add_argument("--dynamic", action="store_true",
-                     help="Same 4 flows but heavy rotates randomly every 10s")
+                     help="18 flows, BW rotates randomly every 10s")
     parser.add_argument("--plot", action="store_true",
                         help="Capture and plot per-flow throughput at exit")
     args = parser.parse_args()
