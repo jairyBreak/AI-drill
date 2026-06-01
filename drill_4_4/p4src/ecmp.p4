@@ -13,9 +13,12 @@ register<bit<32>>(1024) port_map_reg;
 
 //for ML (maybe)
 register<bit<32>>(1024) path_max_queue_depth_reg;
+register<bit<32>>(1024) path_max_q_delay_reg;
+register<bit<32>>(1024) path_acc_q_delay_reg;
 
 counter(512,CounterType.packets) cnt_ingress;
 counter(512,CounterType.packets) cnt_egress;
+counter(512,CounterType.packets) cnt_enq;
 counter(256, CounterType.packets) port_drop_counter;
 counter(256, CounterType.bytes) port_bytes_counter; 
 
@@ -207,6 +210,7 @@ apply {
         bit<32> local_q_depth = 0;
         bit<32> src_add = 0;
         if(standard_metadata.egress_spec < 255){
+            cnt_enq.count((bit<32>)standard_metadata.egress_spec);
             q_depth_reg.read(local_q_depth,(bit<32>)standard_metadata.egress_spec);
         }
 
@@ -221,6 +225,20 @@ apply {
                 if(hdr.int_hdr.path_queue_depth > current_depth){                  
                     path_max_queue_depth_reg.write((bit<32>)src_add, hdr.int_hdr.path_queue_depth);
                 }
+                
+                bit<32> current_max_delay = 0;
+                path_max_q_delay_reg.read(current_max_delay, (bit<32>)src_add);
+                if(hdr.int_hdr.max_q_delay > current_max_delay){                  
+                    path_max_q_delay_reg.write((bit<32>)src_add, hdr.int_hdr.max_q_delay);
+                }
+                
+                // For accumulated delay, we also want the maximum in the time window
+                bit<32> current_acc_delay = 0;
+                path_acc_q_delay_reg.read(current_acc_delay, (bit<32>)src_add);
+                if(hdr.int_hdr.acc_q_delay > current_acc_delay){
+                    path_acc_q_delay_reg.write((bit<32>)src_add, hdr.int_hdr.acc_q_delay);
+                }
+                
                 hdr.ethernet.etherType = hdr.int_hdr.next_proto;
                 hdr.int_hdr.setInvalid();
             }
@@ -229,6 +247,8 @@ apply {
             if(hdr.ipv4.isValid() && standard_metadata.ingress_port == 1){
                 hdr.int_hdr.setValid();
                 hdr.int_hdr.path_queue_depth = local_q_depth;
+                hdr.int_hdr.max_q_delay = 0;
+                hdr.int_hdr.acc_q_delay = 0;
                 hdr.int_hdr.src_id = (bit<16>)hdr.ipv4.srcAddr[7:0];
                 hdr.int_hdr.next_proto = hdr.ethernet.etherType;
                 hdr.ethernet.etherType = 0x9999;
@@ -254,6 +274,14 @@ control MyEgress(inout headers hdr,
         );
         if((bit<32>)standard_metadata.egress_port < 512){
             cnt_egress.count((bit<32>)standard_metadata.egress_port);
+        }
+        
+        if (hdr.int_hdr.isValid()) {
+            bit<32> q_delay = (bit<32>)standard_metadata.deq_timedelta;
+            hdr.int_hdr.acc_q_delay = hdr.int_hdr.acc_q_delay + q_delay;
+            if (q_delay > hdr.int_hdr.max_q_delay) {
+                hdr.int_hdr.max_q_delay = q_delay;
+            }
         }
     }
 }
@@ -296,3 +324,4 @@ MyEgress(),
 MyComputeChecksum(),
 MyDeparser()
 ) main;
+

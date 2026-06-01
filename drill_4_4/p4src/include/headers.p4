@@ -33,6 +33,8 @@ header ipv4_t {
 
 header int_header_t {
     bit<32> path_queue_depth;
+    bit<32> max_q_delay;
+    bit<32> acc_q_delay;
     bit<16> src_id;
     bit<16> next_proto;
 }
@@ -78,4 +80,3 @@ struct headers {
     tcp_t        tcp;
     udp_t        udp;
 }
-

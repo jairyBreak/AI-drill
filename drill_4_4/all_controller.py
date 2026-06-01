@@ -100,7 +100,7 @@ class TopologyAnalyzer:
                 signature.append(edge_labels)
                 path_bottleneck = min(path_bottleneck, self.G[u][v]['bw'])
                 
-            sig_key = tuple(signature)
+            sig_key = (tuple(signature), path_bottleneck)
             if sig_key not in components_dict:
                 components_dict[sig_key] = {'weight': 0.0, 'next_hops': set()}
             

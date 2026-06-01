@@ -10,9 +10,10 @@ from datetime import datetime
 # 導入控制器邏輯
 from realtime_ml_controller import MLController, RankECDF
 
-def run_full_validation(test_duration=60, output_csv="research_results/data/validation/full_metrics_validation.csv", output_img="research_results/plots/validation/full_metrics_comparison.png"):
+def run_full_validation(test_duration=60, output_csv="research_results/data/validation/full_metrics_validation_good_hash_1.csv", output_img="research_results/plots/validation/full_metrics_comparison_good_hash_1.png"):
     print("\n" + "="*100)
     print(f" [全指標可視化驗證工具 v4.2] 開始測試 - 預計時長: {test_duration} 秒")
+    print(f" 模式: 10秒離散採集 (對齊訓練資料集)")
     print(f" 數據: {output_csv} | 圖表: {output_img}")
     print("="*100 + "\n")
     
@@ -24,11 +25,9 @@ def run_full_validation(test_duration=60, output_csv="research_results/data/vali
     sys.modules['__main__'].RankECDF = RankECDF
     ctrl = MLController()
     
-    # 預熱
-    print(" [系統] 正在預熱資料緩存 (10s)...", end='', flush=True)
-    for _ in range(10):
-        ctrl.collect_window(duration=1.0)
-        print(".", end='', flush=True)
+    # 預熱 (10秒模式不需要長時間預熱，但跑一次 10s 採集確保硬體狀態同步)
+    print(" [系統] 正在同步硬體狀態 (10s)...", end='', flush=True)
+    ctrl.collect_window(duration=10.0)
     print(" 完成！\n")
 
     results = []
@@ -39,8 +38,8 @@ def run_full_validation(test_duration=60, output_csv="research_results/data/vali
     
     try:
         while time.time() - start_time < test_duration:
-            # 1. 採集特徵與預測
-            df = ctrl.collect_window(duration=1.0)
+            # 1. 採集 10 秒數據並提取特徵與預測 (關鍵修改點)
+            df = ctrl.collect_window(duration=10.0)
             X, feats = ctrl.extract_features(df)
             
             preds = {}
@@ -102,7 +101,7 @@ def run_full_validation(test_duration=60, output_csv="research_results/data/vali
     axes[0].set_ylabel("Latency (ms)")
     axes[0].legend(loc='upper left')
     axes[0].grid(True, linestyle='--', alpha=0.6)
-    axes[0].set_title(f"Network Performance Validation (v4.2 - Auto-Scaling)")
+    axes[0].set_title(f"Network Performance Validation (v4.2 - 10s Discrete Sampling)")
     
     # 動態計算 Y 軸上限
     y_max_lat = max(plot_df['Real_Lat'].max() if not plot_df['Real_Lat'].isna().all() else 0, 
@@ -126,7 +125,7 @@ def run_full_validation(test_duration=60, output_csv="research_results/data/vali
     axes[2].plot(t_axis, plot_df['Real_Loss'], 'o-', label='Real Loss (iperf3)', color='#7f7f7f', alpha=0.7, markersize=4)
     axes[2].plot(t_axis, plot_df['Pred_Loss'], 's-', label='Predicted Loss (ML)', color='#9467bd', linewidth=2)
     axes[2].set_ylabel("Loss Rate (%)")
-    axes[2].set_xlabel("Sampling Steps (approx 1.5s per step)")
+    axes[2].set_xlabel("Sampling Steps (10s per step)")
     axes[2].legend(loc='upper left')
     axes[2].grid(True, linestyle='--', alpha=0.6)
     
@@ -139,5 +138,5 @@ def run_full_validation(test_duration=60, output_csv="research_results/data/vali
     print(f"動態自適應圖表已保存至 {output_img}")
 
 if __name__ == "__main__":
-    duration = int(sys.argv[1]) if len(sys.argv) > 1 else 60
+    duration = int(sys.argv[1]) if len(sys.argv) > 1 else 70
     run_full_validation(duration)

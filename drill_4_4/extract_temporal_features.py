@@ -10,7 +10,7 @@ import pandas as pd
 PORTS = [2, 3, 4, 5]
 TELEMETRY_DIR = "raw_telemetry"
 BASE_CSV = sys.argv[1] if len(sys.argv) > 1 else "training_dataset_master.csv"
-OUT_CSV = sys.argv[2] if len(sys.argv) > 2 else "training_dataset_temporal.csv"
+OUT_CSV = sys.argv[2] if len(sys.argv) > 2 else "research_results/data/datasets/training_dataset_temporal.csv"
 
 
 def temporal_features_for_experiment(exp_path: str) -> dict:
@@ -21,6 +21,7 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
     slopes_qdepth = []
     cvs_qdepth = []
     fft_max_q = []
+    means_qdepth = []
 
     for p in PORTS:
         qdepth_col = f"src1_port{p}_qdepth"
@@ -34,13 +35,18 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
 
         # p99 queue depth
         feats[f"qdepth_p99_port{p}"] = float(np.percentile(q, 99))
+        
+        # 新增: 平均隊列深度 (更穩定)
+        q_mean = float(np.mean(q))
+        feats[f"qdepth_mean_port{p}"] = q_mean
+        means_qdepth.append(q_mean)
 
         # linear slope
         feats[f"qdepth_slope_port{p}"] = float(np.polyfit(t, q, 1)[0]) if len(q) >= 2 else 0.0
         
         # coefficient of variation
-        q_mean = float(np.mean(q))
-        q_cv = float(np.std(q) / q_mean) if q_mean > 0 else 0.0
+        q_mean_val = float(np.mean(q))
+        q_cv = float(np.std(q) / q_mean_val) if q_mean_val > 0 else 0.0
         feats[f"qdepth_cv_port{p}"] = q_cv
         cvs_qdepth.append(q_cv)
 
@@ -48,10 +54,13 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
         q_diff = np.max(np.abs(np.diff(q))) if len(q) >= 2 else 0.0
         feats[f"qdepth_max_diff_port{p}"] = float(q_diff)
 
+        danger_threshold = 40.0 
+        feats[f"qdepth_danger_ratio_port{p}"] = float(np.sum(q > danger_threshold) / len(q)) if len(q) > 0 else 0.0
+
         # --- FFT Features (Frequency Domain) ---
         if len(q) > 10:
             # Center the signal (remove DC component)
-            q_centered = q - q_mean
+            q_centered = q - q_mean_val
             # Real FFT
             q_fft = np.abs(np.fft.rfft(q_centered))
             # Max magnitude in spectrum (captures dominant oscillation)
@@ -75,6 +84,7 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
     p99_vals = [feats.get(f"qdepth_p99_port{p}", np.nan) for p in PORTS]
     feats["max_qdepth_p99"] = float(np.nanmax(p99_vals)) if p99_vals else np.nan
     feats["total_qdepth_p99"] = float(np.nansum(p99_vals))
+    feats["total_qdepth_mean"] = float(np.nansum(means_qdepth)) # 新增總平均
     feats["qdepth_oscillation"] = float(np.mean(cvs_qdepth)) if cvs_qdepth else np.nan
     feats["qdepth_fft_max_all"] = float(np.max(fft_max_q)) if fft_max_q else 0.0
 

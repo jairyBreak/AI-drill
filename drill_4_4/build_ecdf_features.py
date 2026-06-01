@@ -10,8 +10,8 @@ import joblib
 PORTS = [2, 3, 4, 5]
 ALPHA = 1.1  # scales ECDF above 1 for positive threshold at ~P90.9
 
-BASE_CSV = sys.argv[1] if len(sys.argv) > 1 else "training_dataset_temporal.csv"
-OUT_CSV  = sys.argv[2] if len(sys.argv) > 2 else "training_dataset_ecdf.csv"
+BASE_CSV = sys.argv[1] if len(sys.argv) > 1 else "research_results/data/datasets/training_dataset_temporal.csv"
+OUT_CSV  = sys.argv[2] if len(sys.argv) > 2 else "research_results/data/datasets/training_dataset_ecdf.csv"
 ECDF_PKL = "ecdf_objects.pkl"
 
 CAPACITY = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
