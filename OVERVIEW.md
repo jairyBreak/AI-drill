@@ -4,13 +4,13 @@
 
 Build a **closed-loop, adaptive load balancer** for a simulated P4 data center network, in two stages:
 
-**Stage 1 — Prediction (complete):** Train Random Forest models to predict next-second QoS metrics (latency, jitter, packet loss) from real-time P4 switch telemetry. The models learn from ~4000 collected experiments where random ECMP weights were applied and the resulting network performance measured.
+**Stage 1 — Prediction (complete):** Train Random Forest models to predict next-second QoS metrics (latency, packet loss) from real-time P4 switch telemetry collected via In-Band Network Telemetry (INT) and hardware counters.
 
-**Stage 2 — Control (not yet implemented):** Train a second model (or policy) that takes the Stage 1 predictions as input and outputs optimal ECMP weight adjustments. This closes the loop: telemetry → predict QoS → adjust weights → better performance.
+**Stage 2 — Control (implemented):** At runtime the controller reads P4 hardware registers every second, transforms telemetry into topology-independent features, predicts congestion, and rewrites ECMP weights on the ingress leaf switch. This closes the loop: telemetry → predict QoS → adjust weights → observe → repeat.
 
 The underlying network uses two complementary routing mechanisms:
-- **W-ECMP**: probabilistic traffic splitting across path groups, with weights set by the control plane.
-- **DRILL** (Distributed Randomized In-network Load balancing): inside each group, the P4 dataplane itself picks the least-queued port every packet via power-of-two-choices with memory.
+- **W-ECMP**: probabilistic traffic splitting across spine groups, with weights set by the control plane.
+- **DRILL** (Distributed Randomized In-network Load balancing): inside each group, the P4 dataplane itself picks the least-queued port every packet via power-of-two-choices with memory. Runs fully in hardware, no control plane involved.
 
 ---
 
@@ -18,15 +18,13 @@ The underlying network uses two complementary routing mechanisms:
 
 ```
 AI-drill/
-├── jsq_2_2/              # Original 2-switch ECMP reference (educational baseline)
-└── drill_4_4/            # Active project: 4-leaf/4-spine asymmetric topology
+├── jsq_2_2/              # 2-switch ECMP reference (educational baseline)
+└── main/                 # Active project: 8-leaf/8-spine asymmetric topology
     ├── p4src/            # P4 program (dataplane)
     ├── research_results/ # Curated datasets, validation runs, plots
     │   ├── data/datasets/      # Processed feature datasets (master → temporal → ECDF → cleaned)
-    │   ├── data/validation/    # Per-run validation CSVs (4 validation experiments)
-    │   ├── plots/validation/   # Predicted vs real comparison charts
-    │   ├── plots/analysis/     # Feature importance plots
-    │   └── tools_and_archive/  # Older experimental scripts
+    │   ├── data/validation/    # Per-run validation CSVs
+    │   └── plots/             # Predicted vs real comparison charts
     └── bruh/             # Early algorithm prototypes (not production)
 ```
 
@@ -35,43 +33,51 @@ AI-drill/
 ## Network Topology
 
 ```
-  h1 ── l1 ──┬─── s1 ───┬── l2 ── h2
-             ├─── s2 ───┤
-             ├─── s3 ───┤         (l3, l4 connect symmetrically to all spines)
-             └─── s4 ───┘
-  h3 ── l3               h4 ── l4
+  h1 ── l1 ──┬── s1 ──┬── l2 ── h2
+             ├── s2 ──┤
+             ├── s3 ──┤
+             ├── s4 ──┤
+             ├── s5 ──┤
+             ├── s6 ──┤
+             ├── s7 ──┤
+             └── s8 ──┘
+  (l3–l8 connect identically to all 8 spines)
 ```
 
-- **4 hosts**: h1–h4 at 10.0.1.1 / 10.0.2.2 / 10.0.3.3 / 10.0.4.4
-- **4 leaf switches**: l1–l4 (Thrift ports 9090–9093)
-- **4 spine switches**: s1–s4 (Thrift ports 9094–9097)
+- **8 hosts**: h1–h8 at `10.0.{i}.{i}/24`
+- **8 leaf switches**: l1–l8 (Thrift ports 9090–9097)
+- **8 spine switches**: s1–s8 (Thrift ports 9098–9105)
 
-**Asymmetric uplinks** (this is the key design choice — creates two distinct W-ECMP components):
+**Asymmetric uplinks** (the key design choice — creates 4 distinct W-ECMP components):
 
-| Port at l1/l2 | Spine | Physical BW | Soft-capped (×0.8 via rate_limiter) |
+| Port at lN | Spine | Link BW | Effective cap (rate_limiter ×0.8) |
 |---|---|---|---|
-| 2 | s1 | 1.0 Mbps | **0.8 Mbps** |
-| 3 | s2 | 1.0 Mbps | **0.8 Mbps** |
-| 4 | s3 | 1.5 Mbps | **1.2 Mbps** |
-| 5 | s4 | 1.5 Mbps | **1.2 Mbps** |
+| 2 | s1 | 0.6 Mbps | **0.48 Mbps** |
+| 3 | s2 | 0.6 Mbps | **0.48 Mbps** |
+| 4 | s3 | 0.8 Mbps | **0.64 Mbps** |
+| 5 | s4 | 0.8 Mbps | **0.64 Mbps** |
+| 6 | s5 | 1.0 Mbps | **0.80 Mbps** |
+| 7 | s6 | 1.0 Mbps | **0.80 Mbps** |
+| 8 | s7 | 1.2 Mbps | **0.96 Mbps** |
+| 9 | s8 | 1.2 Mbps | **0.96 Mbps** |
 
-l3/l4 are symmetric (all 1.0 Mbps). The asymmetry on l1/l2 makes weight optimization non-trivial and interesting.
+Same-BW spine pairs form the 4 ECMP components: s1/s2 (0.48M), s3/s4 (0.64M), s5/s6 (0.80M), s7/s8 (0.96M). l3–l8 are symmetric to all spines.
 
 ---
 
 ## Starting the Environment
-After activating p4dev's environment...
+
+After activating p4dev's environment:
 ```bash
-cd drill_4_4 && ./start_env.sh
+cd main && ./start_env.sh
 ```
-Cleans Mininet state, starts p4run in the foreground, then schedules `all_controller.py` (after 10 s) and `rate_limiter.py` (after 13 s) in a background subshell. When it prints "背景設施全部就緒," open a second terminal.
+Cleans Mininet state, compiles and starts p4run (16 BMv2 switches, foreground), polls all 16 Thrift ports (9090–9105) until ready, then launches `all_controller.py` (programs ECMP rules) and `rate_limiter.py` (sets queue caps) in a background subshell. When it prints "背景設施全部就緒", open a second terminal.
 
-### Or Manually
-
+### Or manually
 ```bash
 sudo p4run
-python all_controller.py      # install W-ECMP routing rules
-python rate_limiter.py        # apply port rate/queue limits
+python3 all_controller.py      # install W-ECMP routing rules
+sudo python3 rate_limiter.py   # apply port rate/queue limits
 ```
 
 ---
@@ -84,26 +90,28 @@ python rate_limiter.py        # apply port rate/queue limits
 |---|---|---|
 | `q_depth_reg` | 512 | Live queue depth per port — written by every departing packet |
 | `last_best_p_reg` | 512 | DRILL memory: last winning port per ECMP group |
-| `port_map_reg` | 1024 | `(group_id × 16 + logical_idx)` → physical port |
-| `path_max_queue_depth_reg` | 1024 | Max queue depth per (src_id, port) since last reset — read and zeroed by telemetry collector |
+| `port_map_reg` | 1024 | `(comp_id × 16 + logical_idx)` → physical port |
+| `path_max_queue_depth_reg` | 1024 | Max queue depth per (src_id, port) since last reset — read and zeroed by controller |
+| `path_max_q_delay_reg` | 1024 | Max queue delay in µs per path since last reset |
+| `path_acc_q_delay_reg` | 1024 | Accumulated queue delay in µs per path — hardware ground-truth latency |
 | `port_bytes_counter` | 256 | Cumulative bytes per port — delta = throughput |
-| `cnt_ingress / cnt_egress` | 512 | Per-port packet counters |
+| `cnt_enq / cnt_ingress` | 512 | Per-port enqueue (l1) / ingress (l2) packet counters — difference = drops |
 
 ### Forwarding Pipeline
 
 ```
 ipv4_lpm
  └─ set_w_ecmp → w_ecmp_table     (CRC16 action_selector on 5-tuple → component_id)
-                  └─ drill_params_table  (component_id → run_drill action)
+                  └─ drill_params_table  (component_id → run_drill, num_nhops)
                        └─ ecmp_group_to_nhop  (component_id + best_port → MAC/egress)
 ```
 
-- **`w_ecmp_table`** uses an `action_selector` where group member count = weight. A flow is hashed to a component probabilistically proportional to its weight.
-- **`run_drill`**: picks two distinct random ports in the component, reads their queue depths plus the last-best port's depth, selects the minimum, and writes back the winner. This is DRILL (power-of-two-choices with memory) running entirely in hardware, per-packet.
-- **Egress** writes the real dequeue depth back into `q_depth_reg`, keeping DRILL's register current.
+- **`w_ecmp_table`** uses an `action_selector` where group member count = weight. A flow's 5-tuple is hashed to a component proportionally to its weight.
+- **`run_drill`**: picks two distinct random ports in the component, reads their `q_depth_reg` values plus the last-best port's depth, selects the minimum-queue port, writes back the winner to `q_depth_reg` and `last_best_p_reg`. Runs fully in hardware per-packet.
+- **Egress** writes the real dequeue depth back into `q_depth_reg`.
 
 ### In-Band Network Telemetry (INT)
-Packets originating at port 1 (host-facing) get a custom header (`etherType = 0x9999`) with `path_queue_depth` (accumulated max along the path) and `src_id` (low 8 bits of source IP). At the destination leaf (arriving at port 1) the accumulated depth is written into `path_max_queue_depth_reg[src_id * 16 + port]` and the INT header is stripped. The telemetry collector polls this register at 10 Hz and resets it after each read.
+Packets from port 1 (host-facing) get a custom header (`etherType=0x9999`) carrying accumulated `path_queue_depth`, `max_q_delay`, `acc_q_delay`, and `src_id` (low 8 bits of source IP). At the destination leaf (arriving at port 1) the accumulated values are written into the respective registers at index `src_id * 16 + ingress_port`, and the INT header is stripped. The controller reads and zeros these registers every second.
 
 ---
 
@@ -111,132 +119,157 @@ Packets originating at port 1 (host-facing) get a custom header (`etherType = 0x
 
 ### `all_controller.py` — W-ECMP Rule Installer
 
-**`TopologyAnalyzer`** reads `p4app.json` + `topology.json`, builds a NetworkX graph, annotates each edge with capacity-factor labels, then groups all shortest paths between each leaf pair into **components** by their edge-label signature. For l1→l2, this yields:
-- Component 1 (via s1, s2): bottleneck sum = 2.0 Mbps → weight 2
-- Component 2 (via s3, s4): bottleneck sum = 3.0 Mbps → weight 3
+**`TopologyAnalyzer`** reads `p4app.json` + `topology.json`, builds a NetworkX graph, annotates each edge with capacity-factor labels, then groups all shortest paths between each leaf pair into **components** by their bottleneck-BW signature. For l1→l2 this yields 4 components (s1/s2, s3/s4, s5/s6, s7/s8).
 
 **`LeafController`** buffers all `simple_switch_CLI` commands and fires one subprocess per switch (not one per command), then writes `port_map_reg` entries directly via Thrift RPC.
 
 ### `rate_limiter.py`
-Sets hardware `queue_rate` and `queue_depth` (64 packets) per port on every switch. Applies 0.8× to configured bandwidth, translating the topology's logical Mbps into the actual soft caps the traffic sees.
+Sets hardware `queue_rate` (PPS) and `queue_depth` (64 packets) per port on all 16 switches via Thrift. Applies 0.8× to the configured link BW from `p4app.json`.
 
 ---
 
-## Data Collection (`dataset_builder.py`)
+## Data Collection (`dataset_builder.py` and `rolling_dataset_builder.py`)
+
+### 10-second discrete pipeline (original, `dataset_builder.py`)
 
 Each of 1500 iterations:
-1. Randomly assign weights [1–8] per component → apply to l1 via Thrift.
+1. Randomly assign 2-element weight list → apply to l1 via Thrift
 2. Run in parallel:
-   - **Telemetry** (`telemetry_collector.py`): poll `path_max_queue_depth_reg` + `port_bytes_counter` at 10 Hz for 10 s → 100 rows, reset register after each read. Throughput uses EMA (α=0.3).
-   - **QoS labels** (`iperf_parser.py`): 12 parallel UDP flows (random per-flow BW: 0.1/0.2/0.3/0.4 Mbps, 1400-byte packets) + 100 concurrent pings. Extracts `avg_latency`, `p99_latency`, `avg_jitter`, `loss_rate` from iperf3 JSON.
-3. Aggregate 100 telemetry rows → 1 feature row: queue depth → max; throughput → mean + std.
-4. Append to `training_dataset_master.csv`. Sleep 3 s for queue cooldown.
+   - **Telemetry** (`telemetry_collector.py`): poll `path_max_queue_depth_reg` + `port_bytes_counter` at 10 Hz for 10 s → 100 rows. Reads **l2 ports 2–5 only** (s1–s4; s5–s8 not monitored).
+   - **QoS labels** (`iperf_parser.py`): 12 parallel UDP flows + 100 concurrent pings → `avg_latency`, `avg_jitter`, `loss_rate`
+3. Aggregate 100 telemetry rows → 1 feature row → append to `training_dataset_master.csv`
 
-**Dataset note**: The cleaned training set in `research_results/data/datasets/training_dataset_ecdf_cleaned.csv` has **~4887 rows** (from multiple collection runs merged and cleaned).
+### 1-second rolling pipeline (current, `rolling_dataset_builder.py`)
+
+300 experiments × 120s each. Reads **all 8 spine ports** (2–9). Every second:
+- Reads `path_max_queue_depth_reg`, `path_acc_q_delay_reg` from l2; resets after read
+- Reads `port_bytes_counter` delta → Mbps
+- Reads `cnt_enq` (l1) and `cnt_ingress` (l2) delta → per-port and total drop rate
+- Tracks `Is_Rehash_Event` and `Time_Since_Last_Rehash_s`
+- Labels: `Label_Max_Path_Delay_ms` (INT accumulated delay), `Label_Total_Drop_Rate_Percent`
+- Weights change every 30s within each experiment (covers diverse load scenarios)
+
+Output: `research_results/data/datasets/rolling_training_dataset.csv` (~63k rows)
 
 ---
 
 ## Feature Engineering Pipeline
 
+### 10-second pipeline
 ```
 training_dataset_master.csv
-    │
-    ├── rebuild_dataset.py           → training_dataset_v2.csv
+    ├── rebuild_dataset.py              → training_dataset_v2.csv
     │    trim to valid rows; add per-port CV, load_util, imbalance columns
-    │
-    ├── extract_temporal_features.py → training_dataset_temporal.csv
+    ├── extract_temporal_features.py   → training_dataset_temporal.csv
     │    re-read each raw_telemetry/experiment_N.csv (100 rows @ 10 Hz):
-    │    add per-port qdepth_p99, qdepth_slope, qdepth_cv, mbps_slope
-    │
-    ├── build_ecdf_features.py       → training_dataset_ecdf.csv
+    │    add per-port qdepth_p99, qdepth_slope, qdepth_cv, mbps_slope, FFT max
+    ├── build_ecdf_features.py         → training_dataset_ecdf.csv
     │    rank-based ECDF transform of all features → [0,1]
     │    compute 3 composite indices:
     │      idx_congestion    = (α·max_q_ecdf × α·max_drop_ecdf)²
     │      idx_instability   = (α·max_cv_ecdf × α·neg_slope_ecdf)²
     │      idx_load_balance  = product of util ECDFs × imbalance ECDF
-    │
-    └── [manual cleaning]            → training_dataset_ecdf_cleaned.csv
-         (research_results/data/datasets/ — the active training dataset)
+    └── [manual cleaning]              → training_dataset_ecdf_cleaned.csv
+         (research_results/data/datasets/ — active 10s training set, ~4887 rows, 134 cols)
 ```
 
-`train_simplified_models.py` adds two more features at training time:
-- `qdepth_sq` = `total_qdepth_p99²` (quadratic amplification of severe congestion)
-- `qdepth_slope` = row-to-row difference of `total_qdepth_p99` (congestion trend)
+### 1-second topo-independent transform (`topo_independent_helper.py`)
+
+Converts raw per-port measurements into a **fixed 39-feature vector** regardless of topology size or number of ports. Used by `realtime_ml_controller.py` at inference time.
+
+- **18 global aggregate features**: `Total_Util_Sum`, `Max_Util_Diff`, `Group_Imbalance`, `Max_QDepth`, `Total_QDepth`, `QDepth_Imbalance`, `Max_Q_Ratio`, `Q_Danger_Flag`, `Q_Danger_Count`, `Over_Capacity_Sum`, `Expected_Over_Capacity_Sum`, `Overflow_Intensity`, `Queue_Full_And_Over_Cap`, `Total_Actual_Mbps`, `Total_QDepth_Trend`, `Is_Rehash_Event`, `Time_Since_Last_Rehash_s`, `Rehash_Impact`
+- **7 features × Top-3 most-congested ports**: `qdepth`, `mbps`, `weight`, `norm_load`, `expected_util`, `qdepth_trend`, `mbps_trend`
 
 ---
 
 ## Stage 1: QoS Prediction Models
 
-### Training: `train_simplified_models.py`
+### Training: `train_simplified_models.py` (10-second models)
 
 **Input**: `research_results/data/datasets/training_dataset_ecdf_cleaned.csv` (~4887 rows, 134 columns)
 
-**Feature set** (32 selected features):
-
-| Category | Features |
-|---|---|
-| Per-port queue depth | `src1_port{2-5}_qdepth_max` |
-| Per-port throughput stability | `src1_port{2-5}_mbps_cv`, `src1_port{2-5}_load_util` |
-| Per-port normalized load | `Norm_Load_P{2-5}` = mean_mbps / weight |
-| Cross-port aggregates | `Total_Util_Sum`, `Max_Util_Diff`, `Group_Imbalance` |
-| ECDF / indices | `idx_load_balance`, `mbps_imbalance` |
-| Temporal/statistical | `max_qdepth_p99`, `total_qdepth_p99`, `total_qdepth_max`, `qdepth_max_imbalance` |
-| Frequency domain | `qdepth_fft_max_all` (max FFT magnitude across ports — detects oscillation) |
-| Control action | `Weight_Port{2-5}` (what weights were set when data was collected) |
-| Engineered | `qdepth_sq`, `qdepth_slope` |
+**Feature set** (32 selected features): per-port queue depth, throughput stability, normalized load, cross-port aggregates, ECDF indices, temporal statistics, FFT max, control weights, plus two engineered features (`qdepth_sq`, `qdepth_slope`).
 
 **RF configuration**: 500 trees, max_depth=20, min_samples_leaf=1, max_features=0.8, log1p label transform.
 
 **Targets** (3 regressors + 1 classifier):
 - `Label_Latency_ms` → `rf_model_latency_simplified.pkl`
-- `Label_Jitter_ms` → `rf_model_jitter_simplified.pkl`
+- `Label_Jitter_ms` → `rf_model_jitter_simplified.pkl` *(trained but **excluded** from controller — inaccurate)*
 - `Label_Loss_Rate` → `rf_model_loss_simplified.pkl`
 - Anomaly (loss > 0.001) → `rf_model_anomaly_simplified.pkl`
 
-**Evaluation** (5-fold CV on log-space, reported in original units):
+**Evaluation** (5-fold CV):
 
 | Target | R² | MAE |
 |---|---|---|
 | Latency | 0.91 | ~369 ms |
 | Latency p99 | 0.92 | ~745 ms |
-| Jitter | 0.85 | ~15 ms |
 | Loss rate | 0.85 | ~4.9% |
 | Anomaly accuracy | — | 95.4% |
 
----
+### Training: `train_1s_models.py` (1-second models)
 
-## Stage 1: Real-Time Inference (`realtime_ml_controller.py`)
+**Input**: `rolling_training_dataset.csv`
 
-`MLController` runs a live prediction loop using the trained models:
+**RF configuration**: 100 trees, max_depth=15, min_samples_leaf=4, max_features='sqrt'
 
-### Background threads (always running)
-| Thread | What it does |
-|---|---|
-| `bg_iperf_client` | Single 0.1 Mbps UDP probe flow h1→h2, 3600 s |
-| `bg_log_tail` | Tails the iperf3 server log file, parses per-second jitter and loss |
-| `bg_ping` | Pings h2 every 0.5 s, appends RTT to `lat_buffer` |
+| File | Target | Status |
+|---|---|---|
+| `rf_model_latency_1s.pkl` | `Label_Max_Path_Delay_ms`, log1p | **Not yet trained** |
+| `rf_model_loss_1s.pkl` | `Label_Total_Drop_Rate_Percent` | **Not yet trained** |
+| `rf_model_anomaly_1s.pkl` | Anomaly classifier (loss > 0.1%) | **Not yet trained** |
 
-### Per-second control loop
-1. **`collect_window(1.0 s)`**: polls `path_max_queue_depth_reg` and `port_bytes_counter` at 10 Hz for 1 second (10 samples) → appended to a 100-sample sliding window (deque). The window maintains 10 s of history, matching the training data scale.
-2. **`extract_features(df)`**: computes the 32-feature vector from the sliding window, including ECDF lookups from `ecdf_objects.pkl` for the `idx_load_balance` index.
-3. **Run all 5 models** → apply exponential smoothing (40% new, 60% old) to predicted latency/jitter/loss.
-4. **Print dashboard** showing predicted vs real values side by side:
-   ```
-   [14:32:01] NORMAL  | Lat:  23.1/ 21.0ms | Jit:  9.2/ 8.7ms | Loss:  0.1/ 0.0% | Util: 0.38
-   ```
+Run: `python3 train_1s_models.py`
 
-The controller currently **only observes and predicts** — it does not yet adjust weights.
+**⚠ Known bug**: `CAPACITY` dict in `train_1s_models.py` uses `{2:0.8, 3:0.8, 4:0.8, 5:0.8, 6:1.2, ...}` instead of actual rate-limited values `{2:0.48, 3:0.48, 4:0.64, 5:0.64, 6:0.80, 7:0.80, 8:0.96, 9:0.96}`. Fix before training.
 
 ---
 
-## Stage 2: Weight Optimization (Planned)
+## Stage 1 + 2: Real-Time Controller (`realtime_ml_controller.py`)
 
-The next step is to close the control loop. The Stage 1 predictions give a 1-second lookahead on QoS. A second model or policy will:
-1. Take the current predictions (predicted latency, jitter, loss) as input.
-2. Output an adjustment to the W-ECMP component weights.
-3. Apply the new weights via the Thrift API.
+`MLController` runs passively (no traffic injected). 1-second control loop:
 
-This turns the system into a proper feedback controller: predict → act → observe → repeat.
+### Per-second loop
+1. **`collect_1s_data()`** — reads l2 hardware registers for all 8 spine ports:
+   - `path_max_queue_depth_reg`, `path_acc_q_delay_reg` (reset after read)
+   - `port_bytes_counter` delta → Mbps
+   - l1 `cnt_enq` vs l2 `cnt_ingress` delta → hardware drop rate
+   - Reads current ECMP weights from l1's action profile; flags rehash events
+2. **Feature transform** — appends row to 100-entry rolling deque, calls `transform_to_topo_independent(K=3)`, takes the latest row as a 39-feature vector
+3. **Prediction** — runs all loaded models; applies exponential smoothing to latency/loss. Falls back to reactive thresholds if 1s models are missing.
+4. **`control_step()`** — decides whether to rebalance:
+   - Skip if within 4s cooldown or `max_util < 0.1`
+   - Trigger if: `anomaly==1`, `max_util > 0.6`, `queue_imbalance > 15`, `latency > 200ms`, `loss > 2%`
+5. **`compute_weights()`** — scores each ECMP component by `free_bw × queue_headroom`, normalizes to integers in `[1, 8]`
+6. **`apply_weights()`** — rewrites l1 action profile members in-place (same group handle — table entry is never cleared, other l1 routes are undisturbed)
+
+### Display
+Overwrites one terminal line per second:
+```
+[16:07:25] NORMAL  | Lat:  20.0/  9.1ms | Loss:  0.0/ 0.0% | Util: 0.10
+```
+Format: `predicted / hardware_ground_truth`. Weight changes print on a new line.
+
+---
+
+## Traffic Generator (`traffic.py`)
+
+18 UDP flows h1→h2, ports 5100–5117. BWs from `{0.06, 0.08, 0.16, 0.24, 0.40}` Mbps (total = 3.12 Mbps). Modes:
+- `--default`: 1 flow at 0.3 Mbps
+- `--static`: all 18 flows with a shuffled fixed BW assignment
+- `--dynamic`: flows reshuffle to a new random BW assignment every ~10s
+
+Live spine monitor overlay (in-place overwrite, 8 lines): reads `q_depth_reg` from l1 and `port_bytes_counter` from l2.
+
+---
+
+## Known Gaps
+
+1. **1s models missing** — `rf_model_*_1s.pkl` don't exist. Controller uses reactive thresholds only. Run `rolling_dataset_builder.py` (data), then fix the CAPACITY bug, then `train_1s_models.py`.
+2. **`train_1s_models.py` CAPACITY bug** — feature engineering uses wrong capacity values (see above). Models trained with these values will have miscalibrated utilization features.
+3. **10s models trained on s1–s4 only** — `telemetry_collector.py` reads ports 2–5. s5–s8 were invisible during collection. Simplified models have no knowledge of the higher-BW spine pair.
+4. **10s dataset used 2 ECMP components** — `dataset_builder.py` applied 2-element weight lists. The network has 4 components. Old models never saw s5–s8 weighted.
+5. **No evaluation baseline** — no script compares controller performance against equal-weight ECMP under identical traffic.
 
 ---
 
@@ -244,12 +277,13 @@ This turns the system into a proper feedback controller: predict → act → obs
 
 | File | Purpose |
 |---|---|
-| `analyze_feature_importance.py` | Trains a lightweight 100-tree model and plots feature importances; output in `research_results/plots/analysis/` |
-| `traffic_gen.py` | Simple Python UDP traffic generator (raw sockets, alternative to iperf3) |
+| `analyze_feature_importance.py` | Trains a lightweight 100-tree model and plots feature importances |
 | `plot_all_metrics.py` | Validation comparison plots (predicted vs real) |
-| `plot_latency_validation.py` | Latency-specific validation line charts |
-| `rate_limiter.py` | Hardware queue rate/depth enforcement via Thrift |
-| `network.py` | Python NetworkAPI alternative to `p4app.json` (partial — 2-leaf only) |
+| `plot_1s_metrics.py` | Validation plots for 1s topo-independent predictions |
+| `traffic_gen.py` | Raw UDP socket traffic generator (alternative to iperf3) |
+| `network.py` | Python NetworkAPI network definition (alternative to p4app.json) |
+| `realtime_1s_predictor.py` | Passive 1s monitor using port-specific features |
+| `realtime_1s_predictor_topo_indep.py` | Passive 1s monitor using topo-independent features |
 
 ---
 
@@ -261,31 +295,19 @@ This turns the system into a proper feedback controller: predict → act → obs
 | `p4app.json` | Canonical topology (authoritative for bandwidths + switch config) |
 | `start_env.sh` | One-command environment launcher |
 | `all_controller.py` | Topology analysis + batched W-ECMP rule installation |
-| `rate_limiter.py` | Applies soft bandwidth caps on all switch ports |
-| `dataset_builder.py` | Automated experiment loop: random weights → measure → record |
-| `telemetry_collector.py` | 10 Hz P4 register poller (queue depth + EMA throughput) |
+| `rate_limiter.py` | Applies soft bandwidth caps on all 16 switch ports |
+| `dataset_builder.py` | Old 10s experiment loop: random 2-component weights → measure → record |
+| `rolling_dataset_builder.py` | Current 1s data collection: all 8 spines, rehash tracking, INT labels |
+| `telemetry_collector.py` | Old 10 Hz P4 register poller (ports 2–5 only) |
+| `topo_independent_helper.py` | Converts raw 8-port measurements to 39 topology-agnostic features |
+| `train_simplified_models.py` | **Active 10s training script** — 32-feature RF on ECDF-cleaned dataset |
+| `train_1s_models.py` | **Active 1s training script** — 39-feature RF on rolling dataset |
+| `realtime_ml_controller.py` | **Active live controller** — 1s observe/predict/act loop |
+| `traffic.py` | iperf3 traffic generator with live spine monitor overlay |
 | `iperf_parser.py` | iperf3 UDP + concurrent ping → latency/jitter/loss labels |
-| `rebuild_dataset.py` | Trim master CSV to valid rows + add derived features |
-| `extract_temporal_features.py` | p99, slope, CV features from raw 10 Hz time-series |
-| `build_ecdf_features.py` | ECDF transform + 3 composite congestion indices |
-| `label_generator.py` | Rule-based 4-class congestion labeling |
-| `train_simplified_models.py` | **Active training script** — 32-feature RF on ~4887 rows |
-| `realtime_ml_controller.py` | **Active inference** — sliding-window prediction loop |
-| `analyze_feature_importance.py` | Feature importance analysis and plotting |
-| `research_results/data/datasets/training_dataset_ecdf_cleaned.csv` | Active training dataset (~4887 rows, 134 columns) |
-| `research_results/data/validation/optimized_report.txt` | Model performance summary |
-| `rf_model_latency_simplified.pkl` | Trained latency predictor |
-| `rf_model_jitter_simplified.pkl` | Trained jitter predictor |
-| `rf_model_loss_simplified.pkl` | Trained loss rate predictor |
-| `rf_model_anomaly_simplified.pkl` | Trained congestion anomaly classifier |
-| `ecdf_objects.pkl` | Fitted ECDF lookup objects for inference |
-
----
-
-## Development History
-
-The `bruh/` directory holds early prototypes, ignore it:
-- **`grouping.py`**: proved the component-signature grouping concept that became `TopologyAnalyzer`.
-- **`l1_controller.py`**: hardcoded 2-component controller that preceded `LeafController`.
-
-The `research_results/tools_and_archive/` directory holds older scripts used during model development (hyperparameter search, early regression attempts) that have been superseded by `train_simplified_models.py`.
+| `build_ecdf_features.py` | ECDF rank-transform + 3 composite congestion indices |
+| `research_results/data/datasets/training_dataset_ecdf_cleaned.csv` | Active 10s training dataset (~4887 rows, 134 cols) |
+| `research_results/data/datasets/rolling_training_dataset.csv` | Active 1s training dataset (~63k rows) |
+| `rf_model_latency_simplified.pkl` | Trained 10s latency predictor |
+| `rf_model_loss_simplified.pkl` | Trained 10s loss rate predictor |
+| `rf_model_anomaly_simplified.pkl` | Trained 10s congestion anomaly classifier |

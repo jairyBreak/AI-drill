@@ -1,8 +1,0 @@
-=== Ultimate Stability-Focused Tuning Report ===
-Completed at: 2026-05-10 16:02:58.953831
---------------------------------------------------
-[latency_ms     ] Score: 0.8693 | Gap: 0.1264 | Std: 0.0670 | Time: 56.0m | Params: {'n_estimators': 1000, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 0.4, 'max_depth': 15, 'bootstrap': False}
-[latency_p99_ms ] Score: 0.8712 | Gap: 0.1285 | Std: 0.0513 | Time: 49.2m | Params: {'n_estimators': 400, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 20, 'bootstrap': False}
-[jitter_ms      ] Score: 0.6823 | Gap: 0.3177 | Std: 0.2467 | Time: 47.4m | Params: {'n_estimators': 2000, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'log2', 'max_depth': 30, 'bootstrap': False}
-[loss_rate      ] Score: 0.8344 | Gap: 0.1654 | Std: 0.1109 | Time: 38.2m | Params: {'n_estimators': 400, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 20, 'bootstrap': False}
-[anomaly        ] Score: 0.9562 | Gap: 0.0424 | Std: 0.0362 | Time: 26.6m | Params: {'n_estimators': 1000, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 'log2', 'max_depth': 15, 'bootstrap': False}

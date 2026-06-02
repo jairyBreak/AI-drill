@@ -145,7 +145,7 @@ Converts raw 8-port measurements into a **fixed 39-feature vector** regardless o
 - 18 global aggregate features (total util, queue imbalance, overflow indicators, etc.)
 - 7 features × top-3 most-congested ports (qdepth, mbps, weight, norm_load, expected_util, trends)
 
-This transform is used by both `rolling_dataset_builder.py` during training and `realtime_ml_controller.py` at inference time.
+This transform is used by `realtime_ml_controller.py` at inference time. `rolling_dataset_builder.py` collects raw per-port data; `train_1s_models.py` does its own port-specific feature engineering (`add_1s_features`) rather than using this transform.
 
 ---
 
@@ -155,7 +155,7 @@ This transform is used by both `rolling_dataset_builder.py` during training and 
 
 | File | Target | Notes |
 |------|--------|-------|
-| `rf_model_latency_simplified.pkl` | Latency (ms) | 800 trees, log1p label, 32 features |
+| `rf_model_latency_simplified.pkl` | Latency (ms) | 500 trees, log1p label, 32 features |
 | `rf_model_jitter_simplified.pkl` | Jitter (ms) | Same config — **not used by controller** |
 | `rf_model_loss_simplified.pkl` | Loss rate | Same config |
 | `rf_model_anomaly_simplified.pkl` | Anomaly flag | Classifier, loss > 0.001 threshold |

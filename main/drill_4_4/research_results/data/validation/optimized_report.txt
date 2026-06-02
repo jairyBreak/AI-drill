@@ -1,6 +1,0 @@
-=== Production Model Performance Report ===
-[latency_ms     ] R2: 0.9118 | MAE: 369.2054 ms
-[latency_p99_ms ] R2: 0.9180 | MAE: 745.0827 ms
-[jitter_ms      ] R2: 0.8538 | MAE: 15.0024 ms
-[loss_rate      ] R2: 0.8508 | MAE: 4.9074 ms
-[Anomaly        ] Accuracy: 0.9544
