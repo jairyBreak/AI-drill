@@ -1,22 +1,28 @@
-# 石石專題
-## topology
-- bandwidth : 0.5 Mbps
-- link queue_depth : 256
-## TODO
-### P4
-- 固定間隔檢查並清理 queue_register for maximum queue depth.
-- [v] for group packet drop rate: 增加 counter 計算 ingress/egress 時的封包數
-- collect packet number and timestamp for link utilization and jitter.
-### control plane
--  W-ECMP 的分組 跟 Match-Action Table 的下放
--  修改 topology.json 建立非對稱拓樸
--  Thrift API 讀取 Switch register 與 counter 狀態。
--  透過 controller 動態寫入 W-ECMP 權重參數
-### ML
-- 製作訓練腳本，收集資料
-- 編寫模型然後訓練 (之類的)
-- 線性調整 DRILL 的 d (之類的)
-## Note
-1. The packet drop is undetectable when the load is too large for bandwidth. (except iperf and netstat -i)  
-No need to test the drop rate in this situation since data center don't act like that. Just meature the drop rate for the loss of link. (count in P4 and calculate in controller)
-2. the information for W-ECMP training (still need P4 register or counter): group packet loss rate, group link utilization, Maximum jitter and queue_deqth in group, global link utilizationj Standard Deviation.
+# A Two-Timescale Load Balancer Guided by ML
+> 大象、老鼠、森林：基於機器學習的雙時間尺度負載平衡器
+
+A closed-loop, P4-based data center network load balancer that uses Random Forest models to predict congestion and actively adjust ECMP weights in real time.
+
+## What it does
+
+Traffic flows between hosts through a simulated 8-leaf / 8-spine fabric running on BMv2. Each packet is forwarded using **W-ECMP** (weighted probabilistic splitting across spine groups) combined with **DRILL** (per-packet power-of-two-choices in hardware). A control plane reads P4 hardware registers every second, predicts network QoS, and rewrites ECMP weights on l1 to keep load balanced across all 8 spines.
+
+## Structure
+
+```
+AI-drill/
+├── jsq_2_2/       # 2-switch reference topology (educational baseline)
+└── drill_4_4/     # Active project — see OVERVIEW.md for full documentation
+```
+
+## Quick start
+
+```bash
+cd drill_4_4
+./start_env.sh          # boots P4 network, programs routes, sets rate limits
+# in a second terminal:
+python3 traffic.py --dynamic        # generate 18-flow rotating traffic
+python3 realtime_ml_controller.py   # run the ML controller
+```
+
+See `drill_4_4/OVERVIEW.md` for the full technical reference.

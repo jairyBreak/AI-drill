@@ -1,0 +1,328 @@
+================================================================================
+TRAINING_DATASET_MASTER.CSV - COMPLETE COLUMN REFERENCE
+================================================================================
+
+FILE LOCATION: /home/linuxey/Goldmine/AI-drill/drill_4_4/training_dataset_master.csv
+TOTAL ROWS: 1068 (1 header + 1067 data rows)
+TOTAL COLUMNS: 24
+
+CSV COLUMN INDEX -> Name -> Data Type -> Range/Description
+================================================================================
+
+TELEMETRY FEATURES (Raw queue depth and throughput data)
+-----------
+[Col 1]  src1_port2_qdepth_max
+         Data type: Integer (0-64)
+         Source: max() over 100 raw samples from telemetry_collector
+         Meaning: Peak queue depth observed at egress Port 2
+         
+[Col 2]  src1_port2_mbps_mean
+         Data type: Float
+         Range: 0.0527 - 0.7619 Mbps
+         Source: mean() over 100 raw samples (EMA-smoothed raw throughput)
+         Meaning: Average throughput at Port 2 during 10s test
+         
+[Col 3]  src1_port2_mbps_std
+         Data type: Float
+         Range: 0.0050 - 0.1539 Mbps
+         Source: std(ddof=0) over 100 raw samples
+         Meaning: Variability/burstiness of throughput at Port 2
+
+[Col 4]  src1_port3_qdepth_max
+         Data type: Integer (0-64)
+         Range: 1-64
+         Meaning: Peak queue depth at Port 3
+
+[Col 5]  src1_port3_mbps_mean
+         Data type: Float
+         Range: 0.0458 - 0.7603 Mbps
+         Meaning: Average throughput at Port 3
+
+[Col 6]  src1_port3_mbps_std
+         Data type: Float
+         Range: 0.0029 - 0.1391 Mbps
+         Meaning: Variability of throughput at Port 3
+
+[Col 7]  src1_port4_qdepth_max
+         Data type: Integer (0-64)
+         Range: 1-64
+         Meaning: Peak queue depth at Port 4
+
+[Col 8]  src1_port4_mbps_mean
+         Data type: Float
+         Range: 0.0605 - 1.1597 Mbps (higher capacity port)
+         Meaning: Average throughput at Port 4
+
+[Col 9]  src1_port4_mbps_std
+         Data type: Float
+         Range: 0.0040 - 0.1543 Mbps
+         Meaning: Variability of throughput at Port 4
+
+[Col 10] src1_port5_qdepth_max
+         Data type: Integer (0-64)
+         Range: 1-64
+         Meaning: Peak queue depth at Port 5
+
+[Col 11] src1_port5_mbps_mean
+         Data type: Float
+         Range: 0.0471 - 1.1578 Mbps (higher capacity port)
+         Meaning: Average throughput at Port 5
+
+[Col 12] src1_port5_mbps_std
+         Data type: Float
+         Range: 0.0050 - 0.1586 Mbps
+         Meaning: Variability of throughput at Port 5
+
+CONTEXT FEATURES (System configuration during test)
+-----------
+[Col 13] Total_Load_Mbps
+         Data type: Float
+         Range: 1.2, 2.4, 3.6, 4.8 (deterministic set of 4 values)
+         Calculation: FLOWS * per_flow_bandwidth
+         Where: FLOWS=12 (constant)
+                per_flow_bandwidth in {0.1, 0.2, 0.3, 0.4} Mbps
+         Meaning: Total traffic load injected during test
+
+[Col 14] Weight_Port2
+         Data type: Integer
+         Range: 1-10 (random selection during test)
+         Meaning: ECMP path selection weight for Port 2 during this test
+
+[Col 15] Capacity_Port2
+         Data type: Float
+         Range: 0.8 (constant - from CURRENT_CAPACITY dict)
+         Meaning: Effective bandwidth limit of Port 2
+
+[Col 16] Weight_Port3
+         Data type: Integer
+         Range: 1-10
+         Meaning: ECMP path selection weight for Port 3
+
+[Col 17] Capacity_Port3
+         Data type: Float
+         Range: 0.8 (constant)
+         Meaning: Effective bandwidth limit of Port 3
+
+[Col 18] Weight_Port4
+         Data type: Integer
+         Range: 1-10
+         Meaning: ECMP path selection weight for Port 4
+
+[Col 19] Capacity_Port4
+         Data type: Float
+         Range: 1.2 (constant)
+         Meaning: Effective bandwidth limit of Port 4
+
+[Col 20] Weight_Port5
+         Data type: Integer
+         Range: 1-10
+         Meaning: ECMP path selection weight for Port 5
+
+[Col 21] Capacity_Port5
+         Data type: Float
+         Range: 1.2 (constant)
+         Meaning: Effective bandwidth limit of Port 5
+
+LABEL FEATURES (Measured network performance outcomes)
+-----------
+[Col 22] Label_Latency_ms
+         Data type: Float
+         Range: 15.846 - 2837.039 ms
+         Measurement: ICMP ping RTT average during iperf test
+         Source: Regex extraction from ping command output
+         Meaning: Application-perceived end-to-end latency (heavily influenced by queue depth)
+
+[Col 23] Label_Jitter_ms
+         Data type: Float
+         Range: 8.0 - 51.4 ms
+         Measurement: UDP jitter statistic from iperf3 JSON output
+         Source: data['end']['sum']['jitter_ms']
+         Meaning: Variation in packet inter-arrival time (indicates burstiness)
+
+[Col 24] Label_Loss_Rate
+         Data type: Float
+         Range: 0.0 - 56.6 %
+         Measurement: UDP packet loss percentage from iperf3
+         Calculation: (packets_lost / packets_sent) * 100
+         Source: iperf3 JSON: data['end']['sum']['lost_packets'] / data['end']['sum']['packets']
+         Distribution:
+           0% loss:     554 samples (51.9%)
+           0-1% loss:   2 samples (0.2%)
+           1-10% loss:  81 samples (7.6%)
+           >10% loss:   431 samples (40.4%)
+         Meaning: Hard evidence of packet drops from network congestion/loss
+
+
+================================================================================
+PHYSICAL INTERPRETATION OF PORTS
+================================================================================
+
+Port 2 (Leaf-to-Spine-1 uplink)
+  Physical bandwidth: 1.0 Gbps
+  Effective capacity (simulated): 0.8 Mbps (soft limit)
+  Queue register: path_max_queue_depth_reg[src_id * 16 + 2]
+
+Port 3 (Leaf-to-Spine-2 uplink)
+  Physical bandwidth: 1.0 Gbps
+  Effective capacity (simulated): 0.8 Mbps (soft limit)
+  Queue register: path_max_queue_depth_reg[src_id * 16 + 3]
+
+Port 4 (Leaf-to-Spine-3 uplink)
+  Physical bandwidth: 1.5 Gbps
+  Effective capacity (simulated): 1.2 Mbps (soft limit)
+  Queue register: path_max_queue_depth_reg[src_id * 16 + 4]
+
+Port 5 (Leaf-to-Spine-4 uplink)
+  Physical bandwidth: 1.5 Gbps
+  Effective capacity (simulated): 1.2 Mbps (soft limit)
+  Queue register: path_max_queue_depth_reg[src_id * 16 + 5]
+
+
+================================================================================
+RAW DATA EXAMPLE: Two Contrasting Cases
+================================================================================
+
+EXAMPLE 1: Normal operation (row 2 from CSV)
+  src1_port2_qdepth_max=2
+  src1_port2_mbps_mean=0.3013,  src1_port2_mbps_std=0.049
+  src1_port3_qdepth_max=2
+  src1_port3_mbps_mean=0.3013,  src1_port3_mbps_std=0.0511
+  src1_port4_qdepth_max=2
+  src1_port4_mbps_mean=0.3069,  src1_port4_mbps_std=0.0596
+  src1_port5_qdepth_max=2
+  src1_port5_mbps_mean=0.2967,  src1_port5_mbps_std=0.05
+  Total_Load_Mbps=1.2
+  Weights=[3,3,4,4], Capacities=[0.8,0.8,1.2,1.2]
+  Label_Latency_ms=51.407
+  Label_Jitter_ms=15.205
+  Label_Loss_Rate=0.0
+
+  INTERPRETATION:
+  - Very low queue depths (all 2-3 packets)
+  - Balanced load across ports (mean throughput ~0.30 Mbps each)
+  - Low variation in throughput (std ~0.05 Mbps)
+  - Zero packet loss, low latency (51ms includes RTT baseline ~15ms + minor queuing)
+  - Classification: NORMAL STATE
+
+EXAMPLE 2: Sustained congestion (last row of CSV)
+  src1_port2_qdepth_max=1
+  src1_port2_mbps_mean=0.3044,  src1_port2_mbps_std=0.0518
+  src1_port3_qdepth_max=1
+  src1_port3_mbps_mean=0.2998,  src1_port3_mbps_std=0.0588
+  src1_port4_qdepth_max=64 <- SATURATED
+  src1_port4_mbps_mean=1.1571,  src1_port4_mbps_std=0.1507 <- HIGH LOAD
+  src1_port5_qdepth_max=64 <- SATURATED
+  src1_port5_mbps_mean=1.1549,  src1_port5_mbps_std=0.1586 <- HIGH LOAD
+  Total_Load_Mbps=3.6
+  Weights=[2,2,8,8], Capacities=[0.8,0.8,1.2,1.2]
+  Label_Latency_ms=30.435
+  Label_Jitter_ms=10.815
+  Label_Loss_Rate=15.392 <- HIGH LOSS
+
+  INTERPRETATION:
+  - Severe queue saturation on Ports 4,5 (both maxed at 64)
+  - Asymmetric load: Ports 4,5 carrying >1.1 Mbps each (above capacity!)
+  - Ports 2,3 underutilized (~0.30 Mbps)
+  - High std dev on congested ports indicates packet timing jitter
+  - 15.4% loss correlates with queuing bottleneck
+  - Latency appears low (30ms) because it's measured during burst period
+  - Classification: SUSTAINED CONGESTION (bottleneck on ports 4,5)
+
+EXAMPLE 3: Mixed congestion (port 2-3 saturated, ports 4-5 not)
+  src1_port2_qdepth_max=64 <- SATURATED
+  src1_port2_mbps_mean=0.7504,  src1_port2_mbps_std=0.1215
+  src1_port3_qdepth_max=64 <- SATURATED
+  src1_port3_mbps_mean=0.7538,  src1_port3_mbps_std=0.1173
+  src1_port4_qdepth_max=1 <- UNDERUTILIZED
+  src1_port4_mbps_mean=0.1898,  src1_port4_mbps_std=0.0543
+  src1_port5_qdepth_max=1 <- UNDERUTILIZED
+  src1_port5_mbps_mean=0.2092,  src1_port5_mbps_std=0.0587
+  Total_Load_Mbps=2.4
+  Weights=[10,10,1,1], Capacities=[0.8,0.8,1.2,1.2]
+  Label_Latency_ms=802.855
+  Label_Jitter_ms=16.396
+  Label_Loss_Rate=14.339
+
+  INTERPRETATION:
+  - Massive queue buildup on ports 2-3 (0.8 Mbps capacity, ~0.75 Mbps load)
+  - Ports 4-5 have minimal queues (load-balancer not using them)
+  - ECMP weights heavily favor ports 2-3 (weights 10 vs 1)
+  - Bottleneck effect: 802ms latency from deep queues on ports 2-3
+  - 14% loss from sustained queue overflow
+  - Classification: SUSTAINED CONGESTION (asymmetric routing)
+
+
+================================================================================
+SIGNAL STRENGTH FOR CONGESTION CLASSIFICATION
+================================================================================
+
+To distinguish (a) Normal, (b) Sustained, (c) Burst, (d) Non-congestion loss:
+
+PRIMARY SIGNAL: src1_port*_qdepth_max
+  - Threshold 1: max(all qdepth_max) < 5  -> Likely NORMAL
+  - Threshold 2: max(all qdepth_max) > 50 -> Likely CONGESTION
+  - Between 5-50: Could be transient or balanced multi-port load
+
+SECONDARY SIGNAL: Port load asymmetry
+  - Calculate: std([port2_mbps, port3_mbps, port4_mbps, port5_mbps])
+  - If std < 0.15: Load balanced, less likely single bottleneck
+  - If std > 0.30: Asymmetric, indicates routing to specific ports
+
+TERTIARY SIGNAL: mbps_std (burstiness indicator)
+  - If all mbps_std < 0.10: Smooth traffic (normal or non-congestion loss)
+  - If any mbps_std > 0.15: Bursty traffic (indicates congestion event)
+
+QUATERNARY SIGNAL: Label_Loss_Rate validation
+  - qdepth=64 clusters MUST correlate with loss > 10%
+  - qdepth<5 clusters MUST have loss = 0%
+  - If qdepth_max is low but loss > 1%, suspect: non-congestion loss (link corruption)
+
+QUINARY SIGNAL: Latency delta
+  - Baseline RTT ~15ms (clear path)
+  - Sustained congestion: +800ms typical (deep queue)
+  - Burst congestion: +50-300ms (transient queuing)
+  - Non-congestion loss: +0-20ms (no queue contribution)
+
+
+================================================================================
+HOW RAW TIME-SERIES BECOMES AGGREGATED FEATURES
+================================================================================
+
+For each experiment, telemetry_collector.py captures 100 samples:
+
+RAW SAMPLE (@ t=0.1s):
+  Timestamp=1773902123.903846
+  src1_port2_qdepth=3
+  src1_port2_mbps=0.400 (EMA-smoothed throughput)
+  src1_port3_qdepth=3
+  src1_port3_mbps=0.400
+  src1_port4_qdepth=2
+  src1_port4_mbps=0.350
+  src1_port5_qdepth=2
+  src1_port5_mbps=0.350
+
+[... 99 more samples with similar values ...]
+
+RAW SAMPLE (@ t=10.0s):
+  Timestamp=1773902133.903846
+  src1_port2_qdepth=3
+  src1_port2_mbps=0.410
+  src1_port3_qdepth=3
+  src1_port3_mbps=0.410
+  src1_port4_qdepth=2
+  src1_port4_mbps=0.350
+  src1_port5_qdepth=2
+  src1_port5_mbps=0.350
+
+AGGREGATION (dataset_builder.py lines 140-152):
+  src1_port2_qdepth_max = max([3, 3, ..., 3])                = 3
+  src1_port2_mbps_mean = mean([0.400, 0.401, ..., 0.410])   = 0.3013
+  src1_port2_mbps_std = std([0.400, 0.401, ..., 0.410])     = 0.049
+  [same for ports 3, 4, 5]
+
+FINAL AGGREGATED ROW (1 training example):
+  [3, 0.3013, 0.049, 3, 0.3013, 0.0511, 2, 0.3069, 0.0596, 2, 0.2967, 0.05, ...]
+  src1_port2_qdepth_max=3, src1_port2_mbps_mean=0.3013, src1_port2_mbps_std=0.049, ...
+
+This 1 aggregated row + 1 label set -> becomes 1 line in training_dataset_master.csv
+

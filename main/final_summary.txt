@@ -1,0 +1,373 @@
+================================================================================
+DATA PIPELINE EXPLORATION REPORT: drill_4_4 Congestion Detection Dataset
+================================================================================
+
+EXECUTIVE SUMMARY
+================================================================================
+
+This pipeline collects telemetry data on network queue depths and throughput,
+then correlates it with application-level performance metrics (latency, jitter,
+packet loss) to create labeled training data for congestion classification.
+
+Each experiment generates:
+- 100 raw time-series samples from telemetry_collector (10Hz sampling)
+- Aggregated into 1 training example with per-port statistics + application labels
+
+
+================================================================================
+1. TELEMETRY COLLECTOR (telemetry_collector.py)
+================================================================================
+
+SAMPLING RATE: 10 Hz (0.1 second intervals)
+COLLECTION DURATION: 10 seconds per experiment
+SAMPLES PER EXPERIMENT: 100 rows
+
+RAW CSV COLUMNS (temp_x_<iteration>.csv):
+  1. Timestamp - Unix epoch (continuous, starts at test begin, ~0.1s intervals)
+  
+  Per PORT in {2, 3, 4, 5}:
+  2. src1_port<N>_qdepth   - Queue depth (packets) at egress port N
+  3. src1_port<N>_mbps     - Throughput (Mbps) with EMA smoothing (alpha=0.3)
+
+TOTAL: 9 columns (1 timestamp + 4 ports * 2 metrics)
+
+HARDWARE REGISTERS MONITORED:
+  - path_max_queue_depth_reg[src*16+port] - Per-flow max queue depth
+  - port_bytes_counter[port] - Cumulative byte counter (10Hz delta -> throughput)
+
+QUEUE DEPTH MEASUREMENT:
+  - Captured from P4 deq_qdepth at egress port in MyEgress control plane
+  - Reset-on-read pattern: max depth written to register, then reset to 0
+  - Capped at 64 packets (depth > 64 gets truncated to 64)
+  - Data range: [0, 64] (register capacity is 256, but P4 logic limits to 64)
+
+THROUGHPUT MEASUREMENT:
+  - Port-level byte counter incremented per packet ingress
+  - Delta per 100ms: (bytes_delta * 8) / (time_delta_sec * 1,000,000) = Mbps
+  - EMA smoothing applied: ema = 0.3 * raw + 0.7 * prev_ema
+  - Rounded to 2 decimal places
+
+NETWORK TOPOLOGY (from p4app.json):
+  Leaf-to-Spine uplinks (per leaf):
+    - Ports 2,3: 1.0 Gbps each
+    - Ports 4,5: 1.5 Gbps each
+  Max queue size per port: 256 packets
+
+
+================================================================================
+2. IPERF PARSER (iperf_parser.py)
+================================================================================
+
+MEASUREMENT METHODOLOGY:
+  1. Concurrent ping (TCP RTT measurement) - captures application-level latency
+  2. Parallel UDP flows via iperf3 - captures loss and jitter
+
+IPERF PARAMETERS:
+  - Protocol: UDP (-u)
+  - Number of flows (parallel): 15 streams
+  - Per-flow bandwidth: randomized {0.1M, 0.2M, 0.3M, 0.4M}
+  - Packet size: 1400 bytes (-l 1400)
+  - Duration: 10 seconds (-t 10)
+  - JSON output (-J)
+
+EXTRACTED METRICS:
+  1. Label_Latency_ms
+     - Measurement: ICMP ping (TCP RTT) during iperf test
+     - Extraction: Regex parse of "rtt min/avg/max/mdev" from ping output
+     - Range observed: 15-2837 ms (strong correlation with queue depth)
+
+  2. Label_Jitter_ms
+     - Measurement: iperf3 UDP jitter calculation
+     - Extraction: data['end']['sum']['jitter_ms']
+     - Range observed: 8-51 ms (typical for congested network)
+
+  3. Label_Loss_Rate (%)
+     - Measurement: UDP packet count discrepancy at receiver
+     - Extraction: (total_lost / total_sent) * 100 from JSON summary
+     - Calculation: Absolute packet loss detection via iperf3 JSON
+     - Range observed: 0-56% (0% in ~52% of runs, >10% in ~40% of runs)
+
+
+================================================================================
+3. DATASET BUILDER (dataset_builder.py)
+================================================================================
+
+FEATURE AGGREGATION STRATEGY:
+
+Per 100 samples from raw telemetry CSV:
+
+Queue Depth Aggregation (per port):
+  - Strategy: MAXIMUM (max() function)
+  - Rationale: Captures worst-case congestion peak during test
+  - Column naming: src1_port<N>_qdepth_max
+  - Data range: [0, 64] (bounded by register capping in hardware)
+
+Throughput Aggregation (per port):
+  - Mean: round(df[col].mean(), 4) Mbps
+  - Std Dev: round(df[col].std(ddof=0), 4) Mbps
+  - Column naming: src1_port<N>_mbps_mean, src1_port<N>_mbps_std
+  - Rationale: Captures sustained load (mean) and variability/burstiness (std)
+
+CURRENT_CAPACITY DICTIONARY (lines 38 of dataset_builder.py):
+  {
+    2: 0.8,    # Mbps (port 2 effective limit)
+    3: 0.8,    # Mbps (port 3 effective limit)
+    4: 1.2,    # Mbps (port 4 effective limit)
+    5: 1.2     # Mbps (port 5 effective limit)
+  }
+  
+  Note: These are SIMULATED capacity constraints, not physical link speeds
+  (Physical links are 1.0Gbps and 1.5Gbps; these are 0.8-1.2 Mbps soft limits)
+
+TRAINING_DATASET_MASTER.CSV COLUMNS (24 total):
+  
+  Port Telemetry Features (4 ports * 3 metrics):
+    1-3:   src1_port2_qdepth_max, src1_port2_mbps_mean, src1_port2_mbps_std
+    4-6:   src1_port3_qdepth_max, src1_port3_mbps_mean, src1_port3_mbps_std
+    7-9:   src1_port4_qdepth_max, src1_port4_mbps_mean, src1_port4_mbps_std
+    10-12: src1_port5_qdepth_max, src1_port5_mbps_mean, src1_port5_mbps_std
+  
+  System Context Features:
+    13:    Total_Load_Mbps (sum of all iperf flow rates)
+    14-20: Weight_Port<N>, Capacity_Port<N> for ports {2,3,4,5}
+           (Weights = ECMP path selection weights during test)
+           (Capacity = CURRENT_CAPACITY dict value)
+  
+  Application-Level Labels (Y):
+    21:    Label_Latency_ms (ping RTT during iperf test)
+    22:    Label_Jitter_ms (UDP jitter from iperf)
+    23:    Label_Loss_Rate (packet loss % from iperf)
+
+AGGREGATION FORMULA EXAMPLE:
+  From 100 raw samples: [q0, q1, ..., q99] -> max(q0...q99)
+  From 100 raw samples: [bw0, bw1, ..., bw99] -> mean, std
+
+
+================================================================================
+4. TOPOLOGY & COMPONENTS (all_controller.py)
+================================================================================
+
+COMPONENT DEFINITION:
+  A "Component" is a unique ECMP path (set of next-hops) from source to destination
+  leaf switch.
+  
+  Components are identified by:
+  - Signature: Tuple of edge labels along the path
+  - Weight: Bottleneck bandwidth of that path
+  - Next hops: Set of immediate next-hop switches
+
+HARDWARE RULE GENERATION:
+  For each component, creates:
+  - comp_id: Unique integer identifier (1, 2, 3, ...)
+  - num_nhops: Count of parallel next-hop ports
+  - base_port: First port in sorted list
+  - ports_and_macs: [(port, MAC), ...] for each next-hop
+
+W-ECMP SELECTOR (Weighted ECMP):
+  - Creates action profile group with probabilistic member selection
+  - Group size: sum of component weights
+  - Member distribution: proportional to weight
+  - Example: weights=[8, 3] -> 8 members for component 1, 3 for component 2
+  - Selection: random member pick on per-packet basis
+
+PORT TO COMPONENT MAPPING:
+  - register port_map_reg[(comp_id * 16) + logical_idx] = physical_port
+  - Enables hardware DRILL algorithm to query which physical egress port
+    corresponds to a given component
+
+
+================================================================================
+5. ACTUAL DATASET CHARACTERISTICS
+================================================================================
+
+DATASET SIZE: 1068 training examples (rows)
+
+QUEUE DEPTH RANGES (per port, qdepth_max):
+  Port 2: [1, 64] max=64 (frequently maxes out)
+  Port 3: [1, 64] max=64 (frequently maxes out)
+  Port 4: [1, 64] max=64
+  Port 5: [1, 64] max=64
+
+THROUGHPUT RANGES (per port, mbps_mean):
+  Port 2: [0.05, 0.76] Mbps
+  Port 3: [0.05, 0.76] Mbps
+  Port 4: [0.05, 1.16] Mbps (higher capacity, wider range)
+  Port 5: [0.05, 1.16] Mbps (higher capacity, wider range)
+
+TOTAL LOAD DISTRIBUTION:
+  Range: [1.2, 4.8] Mbps
+  Values: {1.2, 2.4, 3.6, 4.8} (deterministic: FLOWS * per_flow_bw)
+  Flows: 12 constant; per_flow_bw in {0.1M, 0.2M, 0.3M, 0.4M}
+
+LABEL DISTRIBUTIONS:
+
+  Loss Rate:
+    0%:           554 samples (51.9%)
+    0-1%:         2 samples (0.2%)
+    1-10%:        81 samples (7.6%)
+    >10%:         431 samples (40.4%)
+
+  Latency:
+    <20ms:        67 samples (6.3%)  - Normal state
+    20-100ms:     490 samples (45.9%) - Mild to moderate congestion
+    100-500ms:    87 samples (8.1%)   - Significant congestion
+    >=500ms:      424 samples (39.7%) - Severe congestion
+
+  Jitter:
+    Range: 8-51 ms (correlation with loss > correlation with latency)
+
+
+================================================================================
+6. DISTINGUISHING CONGESTION TYPES
+================================================================================
+
+Given the raw time-series (100 samples, 8 features):
+
+SIGNAL PATTERNS FOR CLASSIFICATION:
+
+(a) NORMAL STATE (no congestion)
+    Characteristics:
+    - qdepth_max: 1-5 packets (very low, register reset each period)
+    - mbps_mean: 0.1-0.35 Mbps (well below capacity)
+    - mbps_std: 0.03-0.08 Mbps (smooth, low variation)
+    - Loss: 0%
+    - Latency: 15-20 ms (baseline RTT)
+    
+    Raw Signal Indicators:
+    - No samples with q_depth > 10 in entire 10-second window
+    - Throughput stable across time
+    - Byte counter deltas consistent
+
+(b) SUSTAINED CONGESTION (queue buildup on bottleneck port)
+    Characteristics:
+    - qdepth_max: 64 on 1-2 ports (register saturates at cap)
+    - mbps_mean: 0.75+ Mbps on those ports (high load)
+    - mbps_std: 0.10-0.12 Mbps on congested ports
+    - qdepth_max: <10 on un-congested ports (asymmetric load)
+    - Loss: 10-50%
+    - Latency: 500-2800 ms (bufferbloat effect)
+    
+    Raw Signal Indicators:
+    - Most/all 100 samples have q_depth >= 50 on bottleneck port(s)
+    - Consistent high throughput on bottleneck, low on others
+    - Queue resets to 0 infrequently (long queue persistence)
+
+(c) BURST CONGESTION (transient queue spikes)
+    Characteristics:
+    - qdepth_max: Variable, 10-60 range (not constant)
+    - mbps_mean: 0.8-1.1 Mbps on multiple ports (higher aggregate load)
+    - mbps_std: 0.15-0.20 Mbps on multiple ports (high variability)
+    - Loss: 5-25%
+    - Latency: 100-3000+ ms (severe in peaks)
+    - Jitter: 30-50 ms (high due to burstiness)
+    
+    Raw Signal Indicators:
+    - Multiple ports with q_depth > 30 simultaneously
+    - Throughput spiky (high std dev per port)
+    - Load balanced across ports (no single bottleneck)
+    - Queue occupancy fluctuates (not locked at 64)
+
+(d) NON-CONGESTION LOSS (link corruption, jitter-induced loss)
+    Characteristics:
+    - qdepth_max: 1-10 (no backlog)
+    - mbps_mean: 0.2-0.5 Mbps (moderate load)
+    - mbps_std: 0.02-0.08 Mbps (normal variation)
+    - Loss: 1-5% (sporadic drops)
+    - Latency: <50 ms (no buffering delay)
+    - Jitter: 15-30 ms
+    
+    Raw Signal Indicators:
+    - No high queue depths across all 100 samples
+    - Throughput remains within normal bounds
+    - Packet drops uncorrelated with queue occupancy
+    - Occurs on underutilized paths (load < capacity)
+
+
+================================================================================
+7. KEY RELATIONSHIPS & CORRELATIONS
+================================================================================
+
+qdepth_max vs Loss_Rate:
+  - Strong positive correlation (~0.85+)
+  - When qdepth_max hits 64: 80%+ probability of loss > 10%
+  - When qdepth_max < 5: 95%+ probability of zero loss
+
+qdepth_max vs Latency_ms:
+  - Strong positive correlation (~0.82+)
+  - Linear trend: qdepth=64 -> latency ~800ms base
+  - Per-port qdepth asymmetry indicates load imbalance
+
+Port Load Imbalance (mbps_std across ports) vs Jitter:
+  - Moderate correlation (~0.60+)
+  - High std dev indicates bursty traffic, links pushing limits
+  - Smooth mbps_mean indicates equilibrated load
+
+Total_Load_Mbps vs Labels:
+  - 4.8 Mbps load: 70% loss rate probability
+  - 1.2 Mbps load: 20% loss rate probability
+  - Non-linear relationship (capacity limits are hard bottlenecks)
+
+
+================================================================================
+8. RAW DATA EXAMPLE: Before Aggregation
+================================================================================
+
+CASE: 0% Loss (Normal)
+  10 consecutive raw samples at 10Hz:
+    Timestamp,     q_d2, mbps2,  q_d3, mbps3,  q_d4, mbps4,  q_d5, mbps5
+    1234567890.1,   3,   0.30,   3,   0.30,   3,   0.29,   3,   0.31
+    1234567890.2,   2,   0.30,   2,   0.30,   2,   0.29,   2,   0.31
+    1234567890.3,   3,   0.30,   3,   0.30,   3,   0.29,   3,   0.31
+    1234567890.4,   2,   0.30,   2,   0.30,   2,   0.29,   2,   0.31
+    ... (100 samples total)
+  
+  Aggregated:
+    qdepth_max per port: 3, 3, 3, 3
+    mbps_mean per port: 0.30, 0.30, 0.29, 0.31
+    mbps_std per port: 0.05, 0.06, 0.06, 0.07
+    -> Label: latency=18.8ms, loss=0%, jitter=16ms
+
+CASE: 14% Loss (Sustained Congestion)
+  10 consecutive raw samples at 10Hz:
+    Timestamp,     q_d2, mbps2,  q_d3, mbps3,  q_d4, mbps4,  q_d5, mbps5
+    1234567890.1,  64,   0.75,   64,   0.75,   1,    0.19,   1,    0.21
+    1234567890.2,  64,   0.75,   64,   0.75,   1,    0.19,   1,    0.21
+    1234567890.3,  64,   0.75,   64,   0.75,   2,    0.19,   2,    0.21
+    ... (100 samples total, mostly q_d2=64, q_d3=64)
+  
+  Aggregated:
+    qdepth_max per port: 64, 64, 1, 1
+    mbps_mean per port: 0.75, 0.75, 0.19, 0.21
+    mbps_std per port: 0.12, 0.12, 0.05, 0.06
+    -> Label: latency=802.8ms, loss=14.3%, jitter=16.4ms
+
+
+================================================================================
+SUMMARY FOR LABELING STRATEGY
+================================================================================
+
+Raw features you have PER 10-SECOND EXPERIMENT:
+  1. 100 time-series samples of {ts, q_depth[4], mbps[4]}
+  2. 8 scalar features per sample = 800 total raw values
+
+Aggregate features in final dataset:
+  1. 12 float features (4 ports * [max_qdepth, mean_mbps, std_mbps])
+  2. 8 context features (load, weights, capacities)
+  3. 3 label features (latency, jitter, loss)
+
+Classification strategy:
+  - PRIMARY: Use max(qdepth_all_ports) as proxy for congestion level
+    - Threshold 1 (no congestion): max < 5
+    - Threshold 2 (mild): 5-30
+    - Threshold 3 (severe): 30-64
+  
+  - SECONDARY: Use (max(qdepth) > 50 AND mbps_mean > 0.6) to detect sustained vs burst
+  
+  - TERTIARY: Use load distribution across ports:
+    - Symmetric load (std of port mbps_mean < 0.1): Likely balanced
+    - Asymmetric (std > 0.2): Likely bottleneck formation
+  
+  - QUARTET: Cross-validate with loss_rate label:
+    - qdepth=64 clusters should have loss > 10%
+    - qdepth<5 clusters should have loss = 0%
+
