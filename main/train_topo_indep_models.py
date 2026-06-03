@@ -231,6 +231,29 @@ def train_models():
     X = df[available_features]
     y = (df["Label_Total_Drop_Rate_Percent"] > 0.1).astype(int)
     
+    # 5-fold 交叉驗證評估分類指標
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+    cv_clf = KFold(n_splits=5, shuffle=True, random_state=42)
+    acc_list, prec_list, rec_list, f1_list = [], [], [], []
+    
+    for train_idx, test_idx in cv_clf.split(X):
+        X_tr, X_te = X.iloc[train_idx], X.iloc[test_idx]
+        y_tr, y_te = y.iloc[train_idx], y.iloc[test_idx]
+        
+        model_clf = RandomForestClassifier(**BEST_PARAMS)
+        model_clf.fit(X_tr, y_tr)
+        
+        preds_clf = model_clf.predict(X_te)
+        acc_list.append(accuracy_score(y_te, preds_clf))
+        prec_list.append(precision_score(y_te, preds_clf, zero_division=0))
+        rec_list.append(recall_score(y_te, preds_clf, zero_division=0))
+        f1_list.append(f1_score(y_te, preds_clf, zero_division=0))
+        
+    print(f"[anomaly_1s ] Accuracy:  {np.mean(acc_list):.4f}")
+    print(f"[anomaly_1s ] Precision: {np.mean(prec_list):.4f}")
+    print(f"[anomaly_1s ] Recall:    {np.mean(rec_list):.4f}")
+    print(f"[anomaly_1s ] F1 Score:  {np.mean(f1_list):.4f}")
+    
     clf = RandomForestClassifier(**BEST_PARAMS)
     clf.fit(X, y)
     joblib.dump(clf, "rf_model_anomaly_1s.pkl")

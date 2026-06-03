@@ -152,44 +152,55 @@ class MLController:
         with open(os.devnull, 'w') as devnull, \
              redirect_stdout(devnull), redirect_stderr(devnull):
 
-            if self._grp_handle is not None:
-                # Subsequent calls: rewire members inside the existing group so the
-                # table entry never changes and other l1 routes are undisturbed.
+            # 1. 建立一個全新的群組並填入新權重對應的成員，避免動態修改正在使用的群組成員導致 BMv2 當機
+            new_grp = self._api_control.act_prof_create_group(sel)
+            new_mbr_handles = []
+            for idx, rule in enumerate(self._hw_rules):
+                comp_id = str(rule['comp_id'])
+                for _ in range(weights_list[idx]):
+                    m = self._api_control.act_prof_create_member(sel, act, [comp_id])
+                    self._api_control.act_prof_add_member_to_group(sel, m, new_grp)
+                    new_mbr_handles.append(m)
+
+            # 2. 獲取現有轉發表中 TARGET_IP 對應的 Entry Handle
+            try:
+                self._api_control.load_table_entries_match_to_handle()
+                entry_handle = self._api_control.get_handle_from_match("w_ecmp_table", [TARGET_IP])
+            except Exception:
+                entry_handle = None
+
+            # 3. 如果 entry_handle 存在，原子性地修改表項指向新群組
+            if entry_handle is not None:
                 try:
+                    self._api_control.client.bm_mt_indirect_ws_modify_entry(0, "w_ecmp_table", entry_handle, new_grp)
+                except Exception:
+                    # 如果 Thrift RPC 修改失敗，退回到刪除並重新添加的方案
+                    try:
+                        self._api_control.table_delete("w_ecmp_table", entry_handle)
+                    except Exception:
+                        pass
+                    entry_handle = None
+
+            # 4. 如果 entry_handle 不存在（首次執行或之前被刪除），則直接添加表項
+            if entry_handle is None:
+                subprocess.run(
+                    ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
+                    input=f"table_indirect_add_with_group w_ecmp_table {TARGET_IP} => {new_grp}\n",
+                    text=True, capture_output=True
+                )
+
+            # 5. 安全地刪除舊群組與舊成員（因為它們現在已經沒有被任何表項引用了，這在 BMv2 中是完全安全的）
+            if self._grp_handle is not None:
+                try:
+                    self._api_control.act_prof_delete_group(sel, self._grp_handle)
                     for m in self._mbr_handles:
-                        self._api_control.act_prof_remove_member_from_group(sel, m, self._grp_handle)
                         self._api_control.act_prof_delete_member(sel, m)
                 except Exception:
                     pass
-                self._mbr_handles = []
-                for idx, rule in enumerate(self._hw_rules):
-                    comp_id = str(rule['comp_id'])
-                    for _ in range(weights_list[idx]):
-                        m = self._api_control.act_prof_create_member(sel, act, [comp_id])
-                        self._api_control.act_prof_add_member_to_group(sel, m, self._grp_handle)
-                        self._mbr_handles.append(m)
-            else:
-                # First call: replace all_controller.py's entry for TARGET_IP only.
-                # table_clear is unavoidable here, but runs once and only once.
-                subprocess.run(
-                    ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
-                    input="table_clear w_ecmp_table\n",
-                    text=True, capture_output=True
-                )
-                grp = self._api_control.act_prof_create_group(sel)
-                self._mbr_handles = []
-                for idx, rule in enumerate(self._hw_rules):
-                    comp_id = str(rule['comp_id'])
-                    for _ in range(weights_list[idx]):
-                        m = self._api_control.act_prof_create_member(sel, act, [comp_id])
-                        self._api_control.act_prof_add_member_to_group(sel, m, grp)
-                        self._mbr_handles.append(m)
-                self._grp_handle = grp
-                subprocess.run(
-                    ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
-                    input=f"table_indirect_add_with_group w_ecmp_table {TARGET_IP} => {grp}\n",
-                    text=True, capture_output=True
-                )
+
+            # 6. 更新實體變數參考
+            self._grp_handle = new_grp
+            self._mbr_handles = new_mbr_handles
 
     def control_step(self, feats, preds):
         if time.time() - self._last_adj_time < COOLDOWN_SEC:
