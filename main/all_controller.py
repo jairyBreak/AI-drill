@@ -216,7 +216,72 @@ class LeafController:
 
 
 # ==========================================
-# 模組 3: 主控制迴圈 (批次執行版)
+# 模組 3: 共用安裝程序 (供主程式與 realtime_ml_controller 啟動時共用)
+# ==========================================
+def clear_leaf_forwarding(api):
+    """清掉某 leaf 既有的 W-ECMP 轉發 (三張表 + action profile group/member)。
+
+    讓安裝從乾淨狀態開始、且可重複執行；切換演算法 (ECMP / W-ECMP / ML) 時尤其重要，
+    否則殘留的舊 component 設定會與新設定衝突。
+    """
+    grp_handles = set()
+    try:
+        for e in api.table_get_entries("w_ecmp_table", False):
+            try:
+                grp_handles.add(e.action_data.action_params[0])
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    for t in ("w_ecmp_table", "drill_params_table", "ecmp_group_to_nhop"):
+        try:
+            api.table_clear(t)
+        except Exception:
+            pass
+
+    for gh in grp_handles:
+        try:
+            info = api.act_prof_get_group("w_ecmp_selector", gh)
+            api.act_prof_delete_group("w_ecmp_selector", gh)
+            for mh in info.member_handles:
+                try:
+                    api.act_prof_delete_member("w_ecmp_selector", mh)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+
+def install_ecmp_drill_rules(p4app_data, topo_json_obj, clear_first=True, verbose=True):
+    """在所有 leaf pair 安裝正式的 4-component W-ECMP+DRILL 轉發規則。
+
+    這是 4-component 設定的唯一來源 (single source of truth)，被 all_controller 主程式
+    與 realtime_ml_controller 啟動時共用，確保不論前一個跑的是哪個基準演算法，狀態都正確。
+    """
+    analyzer = TopologyAnalyzer(p4app_data, topo_json_obj)
+    leaves = sorted(analyzer.leaf_switches)
+    controllers = {leaf: LeafController(leaf, topo_json_obj) for leaf in leaves}
+
+    for src_leaf in leaves:
+        ctrl = controllers[src_leaf]
+        if ctrl.api is None:
+            continue
+        if clear_first:
+            clear_leaf_forwarding(ctrl.api)
+        for dst_leaf in leaves:
+            if src_leaf == dst_leaf:
+                continue
+            weights_list, hardware_rules = analyzer.get_ecmp_weights_and_rules(src_leaf, dst_leaf)
+            target_ip = analyzer.leaf_to_ip[dst_leaf]
+            ctrl.set_w_ecmp_weights(target_ip, weights_list, hardware_rules)
+        ctrl.commit_cli_cmds()
+        if verbose:
+            print(f"[{src_leaf}] 批次寫入硬體規則")
+
+
+# ==========================================
+# 模組 4: 主控制迴圈 (批次執行版)
 # ==========================================
 if __name__ == "__main__":
     if not os.path.exists('p4app.json') or not os.path.exists('topology.json'):
@@ -226,30 +291,11 @@ if __name__ == "__main__":
     with open('p4app.json', 'r') as f:
         p4app_data = json.load(f)
     topo_json_obj = load_topo('topology.json')
-    
-    analyzer = TopologyAnalyzer(p4app_data, topo_json_obj)
-    controllers = {leaf: LeafController(leaf, topo_json_obj) for leaf in analyzer.leaf_switches}
 
     print("\n===========================================")
     print(" 啟動全網自適應 W-ECMP 控制器 (批次寫入優化版)")
     print("===========================================\n")
 
-    for src_leaf in analyzer.leaf_switches:
-        print(f"[{src_leaf}] 計算轉發規則")
-        
-        for dst_leaf in analyzer.leaf_switches:
-            if src_leaf == dst_leaf:
-                continue
-            
-            weights_list, hardware_rules = analyzer.get_ecmp_weights_and_rules(src_leaf, dst_leaf)
-            target_ip = analyzer.leaf_to_ip[dst_leaf]
-            
-            # 此時只會將 CLI 指令存入該 Leaf 的緩衝區，不會觸發 subprocess
-            controllers[src_leaf].set_w_ecmp_weights(target_ip, weights_list, hardware_rules)
-            
-        # 等該 Leaf 所有目標 IP 的規則都計算完畢後，一次性發送 1 個子行程寫入所有指令
-        print(f"[{src_leaf}] 批次寫入硬體規則")
-        controllers[src_leaf].commit_cli_cmds()
-        print("-" * 50)
-        
+    install_ecmp_drill_rules(p4app_data, topo_json_obj, clear_first=True, verbose=True)
+
     print("\n全網拓樸批次配置完畢！")

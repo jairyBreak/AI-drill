@@ -23,7 +23,7 @@ if P4_UTILS_PATH not in sys.path:
 
 from p4utils.utils.helper import load_topo
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
-from all_controller import TopologyAnalyzer
+from all_controller import TopologyAnalyzer, install_ecmp_drill_rules
 from topo_independent_helper import transform_to_topo_independent
 
 # 設定日誌 (只顯示 ERROR 以上)
@@ -42,11 +42,17 @@ CAPACITY = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
 
 LATENCY_THRESHOLD_MS = 200.0
 LOSS_THRESHOLD_PCT   = 2.0
-COOLDOWN_SEC         = 4
+COOLDOWN_SEC         = 6
 WEIGHT_MIN           = 1
 WEIGHT_MAX           = 8
+WEIGHT_SMOOTHING     = 0.35   # 權重 EMA 平滑係數 (0=凍結, 1=即時)；越小越穩、擺盪越少
+WEIGHT_AVG           = 4      # 等分時每個 component 的基準權重 (4 components -> 平均 4)
 UTIL_THRESHOLD       = 0.6
 MIN_UTIL_TO_REBALANCE = 0.1
+BALANCE_UTIL_TOLERANCE = 0.15  # 各 component 利用率差距 < 此值 -> 視為已平衡，不動權重
+
+# 結果 CSV (與 baseline / plot_1s_metrics 相同欄位，供 plot_result.py 三方比較)
+OUTPUT_CSV = "research_results/data/validation/comparison_ml.csv"
 
 MODELS = {
     "latency": "rf_model_latency_1s.pkl",
@@ -75,13 +81,31 @@ for _k in range(3):
 class MLController:
     def __init__(self):
         self.topo = load_topo("topology.json")
+
+        # 啟動時重裝 4-component W-ECMP+DRILL 轉發 (覆蓋任何 baseline 殘留設定)。
+        # 否則若上一個跑的是 baseline_ecmp/wecmp (8 個單埠 component)，本控制器發出的
+        # comp_id 1-4 會對應到錯誤的單埠映射，導致流量只走 2-3 個 spine。
+        print("[init] 重新安裝 4-component W-ECMP+DRILL 轉發 (覆蓋 baseline 設定)...")
+        with open('p4app.json') as _f:
+            _p4app = json.load(_f)
+        with open(os.devnull, 'w') as _dn, redirect_stdout(_dn), redirect_stderr(_dn):
+            install_ecmp_drill_rules(_p4app, self.topo, clear_first=True, verbose=False)
+        print("[init] 轉發規則安裝完成")
+
         self.api_telemetry = SimpleSwitchThriftAPI(self.topo.get_thrift_port(TARGET_LEAF))
 
         # 載入模型 (安全載入，缺少模型時發出警告)
         self.models = {}
         for k, v in MODELS.items():
             if os.path.exists(v):
-                self.models[k] = joblib.load(v)
+                mdl = joblib.load(v)
+                # 單列推論用不到平行運算；關掉 joblib worker 可消除 sklearn 平行警告並略為加速
+                try:
+                    mdl.set_params(n_jobs=1)
+                except Exception:
+                    try: mdl.n_jobs = 1
+                    except Exception: pass
+                self.models[k] = mdl
                 print(f"   - 載入模型 {v} 成功")
             else:
                 print(f"   - 警告: 找不到模型檔案 {v}")
@@ -109,6 +133,7 @@ class MLController:
         self._mbr_handles   = []
         self._last_adj_time = 0.0
         self._last_weights  = []
+        self._smoothed_weights = None   # 連續權重 EMA 狀態，避免硬切換造成擺盪
 
         # 初始化 l1 enqueue 計數器基準 (在 _api_control 建立後)
         with open(os.devnull, 'w') as _f, redirect_stdout(_f), redirect_stderr(_f):
@@ -124,6 +149,9 @@ class MLController:
                     self.prev_bytes[p]      = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
                     self.prev_l2_ingress[p] = self.api_telemetry.counter_read('cnt_ingress', p)[0]
                 except: pass
+        self._prev_sample_t = time.time()   # 上次取樣時間，用於計算真實取樣間隔
+        self._cum_enq  = 0                   # 自開始累積的 l1 enqueue 封包數
+        self._cum_recv = 0                   # 自開始累積的 l2 ingress 封包數 (用於端到端丟包率)
 
     def _load_hw_rules(self):
         with open('p4app.json') as f:
@@ -132,17 +160,48 @@ class MLController:
         _, rules = analyzer.get_ecmp_weights_and_rules(CONTROL_LEAF, TARGET_LEAF)
         return rules
 
-    def compute_weights(self, feats):
-        scores = []
+    def _component_utils(self, feats):
+        """每個 component 的容量加權平均利用率 (load/cap)。"""
+        cu = []
         for rule in self._hw_rules:
-            port = rule['ports_and_macs'][0][0]
-            util   = feats.get(f'src1_port{port}_load_util', 0.1)
-            qdepth = feats.get(f'src1_port{port}_qdepth_max', 0)
-            free_bw    = CAPACITY[port] * max(0.0, 1.0 - util)
+            ports = [p for p, _ in rule['ports_and_macs']]
+            cap   = sum(CAPACITY[p] for p in ports)
+            load  = sum(feats.get(f'src1_port{p}_load_util', 0.0) * CAPACITY[p] for p in ports)
+            cu.append(load / cap if cap > 0 else 0.0)
+        return cu
+
+    def is_balanced(self, feats):
+        """各 component 利用率差距夠小 -> 已平衡 (重配權重幫不上忙)。"""
+        cu = self._component_utils(feats)
+        return (max(cu) - min(cu)) < BALANCE_UTIL_TOLERANCE if cu else True
+
+    def compute_weights(self, feats):
+        # 1. 每個 component 算一個「可用度」分數 (跨該 component 的所有埠取最差值)
+        raw = []
+        for rule in self._hw_rules:
+            ports  = [p for p, _ in rule['ports_and_macs']]
+            util   = max(feats.get(f'src1_port{p}_load_util', 0.1) for p in ports)
+            qdepth = max(feats.get(f'src1_port{p}_qdepth_max', 0)  for p in ports)
+            cap        = sum(CAPACITY[p] for p in ports)
+            free_bw    = cap * max(0.0, 1.0 - util)
             q_headroom = max(0.0, 64 - qdepth) / 64.0
-            scores.append(free_bw * q_headroom + 0.01)
-        min_s = min(scores)
-        return [max(WEIGHT_MIN, min(WEIGHT_MAX, round(s / min_s))) for s in scores]
+            raw.append(free_bw * q_headroom + 0.05)
+
+        # 2. 比例正規化 (除以總和，而非最小值) -> 目標連續權重，平均落在 WEIGHT_AVG
+        n      = len(raw)
+        total  = sum(raw) or 1.0
+        target = [(r / total) * n * WEIGHT_AVG for r in raw]
+
+        # 3. EMA 平滑：在連續權重上做指數平滑，逐步逼近目標，避免在 1/8 之間硬擺
+        if self._smoothed_weights is None or len(self._smoothed_weights) != n:
+            self._smoothed_weights = list(target)
+        else:
+            a = WEIGHT_SMOOTHING
+            self._smoothed_weights = [a * t + (1 - a) * s
+                                      for t, s in zip(target, self._smoothed_weights)]
+
+        # 4. 四捨五入並夾在 [WEIGHT_MIN, WEIGHT_MAX]
+        return [max(WEIGHT_MIN, min(WEIGHT_MAX, round(w))) for w in self._smoothed_weights]
 
     def apply_weights(self, weights_list):
         sel = "w_ecmp_selector"
@@ -217,9 +276,15 @@ class MLController:
         )
         if not trigger:
             return
+
+        # 觸發了 (偵測到問題)：先評估目前是否已平衡，再決定是否真的動權重
         new_weights = self.compute_weights(feats)
-        if new_weights == self._last_weights:
+        if self.is_balanced(feats) or new_weights == self._last_weights:
+            # 已平衡 (或目標與現況相同) -> 不動權重，套用冷卻避免每秒重印
+            self._last_adj_time = time.time()
+            print("\n[CTRL] weight not changed", flush=True)
             return
+
         try:
             self.apply_weights(new_weights)
         except Exception:
@@ -279,11 +344,13 @@ class MLController:
 
     def collect_1s_data(self):
         """採集 1 秒的數據點與硬體真實數據"""
-        start_t = time.time()
         time.sleep(1.0)
-        dt = time.time() - start_t
+        now_t        = time.time()
+        # dt = 與上次取樣的真實間隔 (含處理時間)；不可只用 sleep(1.0)，否則處理較慢時吞吐量會被高估
+        dt           = now_t - self._prev_sample_t
+        self._prev_sample_t = now_t
 
-        current_time    = time.time()
+        current_time    = now_t
         row             = {}
         qdepths         = []
         max_hw_latency  = 0
@@ -332,14 +399,21 @@ class MLController:
                     self.prev_l1_enq[p]     = l1_enq_pkts
                     self.prev_l2_ingress[p] = l2_ingress_pkts
 
+                    # 瞬時 (每秒) 估計 — 受佇列堆積/延遲影響會偏高，僅供時間序列參考
                     if delta_enq > 0:
                         drops            = max(0, delta_enq - delta_ingress)
                         total_delta_enq += delta_enq
                         total_drops     += drops
+
+                    # 累積總量 (不夾值，全埠) — 用於端到端正確丟包率，堆積/排空會自然抵消
+                    self._cum_enq  += delta_enq
+                    self._cum_recv += delta_ingress
                 except: pass
 
         row['Real_HW_Latency_ms']         = max_hw_latency / 1000.0
         row['Real_HW_Loss_Percent']       = (total_drops / total_delta_enq * 100) if total_delta_enq > 0 else 0.0
+        row['Cum_Enq']                    = self._cum_enq
+        row['Cum_Recv']                   = self._cum_recv
         row["Time_Since_Traffic_Start_s"] = current_time - self.start_time
         row["Is_Rehash_Event"]            = self.is_rehash_event
         self.is_rehash_event              = 0
@@ -348,13 +422,18 @@ class MLController:
 
         return row
 
-    def run(self):
+    def run(self, duration=None):
         print("\n" + "="*125)
-        print(" [ML 智能監控 v4.3] 啟動 - 1s 拓樸無關採集模式")
+        dur_txt = f"{duration}s" if duration else "持續 (Ctrl-C 停止)"
+        print(f" [ML 智能監控 v4.3] 啟動 - 1s 拓樸無關採集模式 | 時長: {dur_txt}")
         print("="*125 + "\n")
 
+        results = []
+        start = time.time()
         try:
             while True:
+                if duration is not None and time.time() - start >= duration:
+                    break
                 data_row = self.collect_1s_data()
                 self.raw_history.append(data_row)
 
@@ -364,10 +443,11 @@ class MLController:
                 X              = pd.DataFrame([last_row[FEATURE_NAMES]])
 
                 preds = {}
-                for k, m in self.models.items():
-                    p = m.predict(X)[0]
-                    if k == "latency": p = np.expm1(p)
-                    preds[k] = p
+                with open(os.devnull, 'w') as _dn, redirect_stderr(_dn):
+                    for k, m in self.models.items():
+                        p = m.predict(X)[0]
+                        if k == "latency": p = np.expm1(p)
+                        preds[k] = p
 
                 self.smoothed_latency = preds.get('latency', self.smoothed_latency)
                 self.smoothed_loss    = preds.get('loss',    self.smoothed_loss)
@@ -384,6 +464,20 @@ class MLController:
                 hw_lat  = data_row['Real_HW_Latency_ms']
                 hw_loss = data_row['Real_HW_Loss_Percent']
 
+                # 記錄一列 (與 baseline / plot_1s_metrics 完全相同欄位 + 各交換機 util)
+                results.append({
+                    'Timestamp':  datetime.now(),
+                    'Pred_Lat':   self.smoothed_latency,
+                    'Real_Lat':   hw_lat,
+                    'Pred_Loss':  self.smoothed_loss,
+                    'Real_Loss':  hw_loss,
+                    'Util_Sum':   feats['Total_Util_Sum'],
+                    'Total_Mbps': last_row['Total_Actual_Mbps'],
+                    'Cum_Enq':    data_row['Cum_Enq'],
+                    'Cum_Recv':   data_row['Cum_Recv'],
+                    **{f'util_s{p-1}': feats[f'src1_port{p}_load_util'] for p in PORTS},
+                })
+
                 print(f"\r[{datetime.now().strftime('%H:%M:%S')}] {status:7} | "
                       f"Lat: {self.smoothed_latency:5.1f}/{hw_lat:5.1f}ms | "
                       f"Loss: {self.smoothed_loss:4.1f}/{hw_loss:4.1f}% | "
@@ -391,8 +485,14 @@ class MLController:
                       end='', flush=True)
                 self.control_step(feats, preds)
         except KeyboardInterrupt: print("\n停止。")
+        finally:
+            if results:
+                os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
+                pd.DataFrame(results).to_csv(OUTPUT_CSV, index=False)
+                print(f"已寫入 {len(results)} 列 -> {OUTPUT_CSV}")
 
 
 if __name__ == "__main__":
+    duration = int(sys.argv[1]) if len(sys.argv) > 1 else None
     ctrl = MLController()
-    ctrl.run()
+    ctrl.run(duration)

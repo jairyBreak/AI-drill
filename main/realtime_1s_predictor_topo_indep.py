@@ -98,6 +98,9 @@ class Realtime1sPredictorTopoIndep:
                 self.prev_l1_enq[p] = self.api_control.counter_read('cnt_enq', p)[0]
                 self.prev_l2_ingress[p] = self.api_telemetry.counter_read('cnt_ingress', p)[0]
             except: pass
+        self._prev_sample_t = time.time()   # 上次取樣時間，用於計算真實取樣間隔
+        self._cum_enq = 0                    # 自開始累積的 l1 enqueue 封包數
+        self._cum_recv = 0                   # 自開始累積的 l2 ingress 封包數 (用於端到端丟包率)
 
     def get_current_weights(self):
         """從 L1 交換機的 Action Profile 讀取真實權重配置"""
@@ -142,11 +145,13 @@ class Realtime1sPredictorTopoIndep:
 
     def collect_1s_data(self):
         """採集 1 秒的數據點與硬體真實數據"""
-        start_t = time.time()
         time.sleep(1.0)
-        dt = time.time() - start_t
-        
-        current_time = time.time()
+        now_t = time.time()
+        # dt = 與上次取樣的真實間隔 (含處理時間)；不可只用 sleep(1.0)，否則處理較慢時吞吐量會被高估
+        dt = now_t - self._prev_sample_t
+        self._prev_sample_t = now_t
+
+        current_time = now_t
         row = {}
         
         # 1. 獲取權重並判斷 Rehash 事件
@@ -200,16 +205,23 @@ class Realtime1sPredictorTopoIndep:
                 
                 self.prev_l1_enq[p] = l1_enq_pkts
                 self.prev_l2_ingress[p] = l2_ingress_pkts
-                
+
+                # 瞬時 (每秒) 估計 — 受佇列堆積/延遲影響會偏高，僅供時間序列參考
                 if delta_enq > 0:
                     drops = max(0, delta_enq - delta_ingress)
                     total_delta_enq += delta_enq
                     total_drops += drops
+
+                # 累積總量 (不夾值，全埠) — 用於端到端正確丟包率
+                self._cum_enq += delta_enq
+                self._cum_recv += delta_ingress
             except: pass
 
         # 寫入硬體真實數值供終端機顯示
         row['Real_HW_Latency_ms'] = max_hw_latency / 1000.0
         row['Real_HW_Loss_Percent'] = (total_drops / total_delta_enq * 100) if total_delta_enq > 0 else 0.0
+        row['Cum_Enq'] = self._cum_enq
+        row['Cum_Recv'] = self._cum_recv
 
         # 時間相關指標，對齊 Dataset 結構
         row["Time_Since_Traffic_Start_s"] = current_time - self.start_time

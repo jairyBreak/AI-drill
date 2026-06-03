@@ -39,6 +39,11 @@ main/live_telemetry.csv
 main/live_telemetry*.png
 main/confusion_matrix.png
 
+# Algorithm-comparison temp results (regenerated each run by baselines / ML controller)
+main/research_results/data/validation/comparison_*.csv
+main/research_results/plots/validation/algorithm_comparison.png
+main/research_results/plots/validation/switch_utilization.png
+
 # Temporary analysis slices
 main/temp_x_*.csv
 
