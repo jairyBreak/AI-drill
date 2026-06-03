@@ -103,34 +103,41 @@ class Realtime1sPredictorTopoIndep:
         """從 L1 交換機的 Action Profile 讀取真實權重配置"""
         weights = {p: 1 for p in PORTS}
         try:
-            # 1. 讀取 W-ECMP Table，獲取 Group Handle
-            entries = self.api_control.table_get_entries("w_ecmp_table", False)
-            if not entries: 
+            import socket
+            entries = self.api_control.client.bm_mt_get_entries(0, "MyIngress.w_ecmp_table")
+            if not entries:
                 return weights
-            grp_handle = entries[0].action_data.action_params[0]
             
-            # 2. 讀取 Action Profile Selector 的 Group 資訊
-            grp_info = self.api_control.act_prof_get_group("w_ecmp_selector", grp_handle)
-            members = grp_info.member_handles
+            target_ip_bytes = socket.inet_aton(TARGET_IP)
+            target_entry = None
+            for entry in entries:
+                if entry.match_key and entry.match_key[0].exact and entry.match_key[0].exact.key == target_ip_bytes:
+                    target_entry = entry
+                    break
             
-            # 3. 統計每個 Component ID 出現的次數 (即為權重)
-            comp_counts = {}
-            for m_handle in members:
-                mbr = self.api_control.act_prof_get_member("w_ecmp_selector", m_handle)
-                comp_id = int(mbr.action_params[0])
-                comp_counts[comp_id] = comp_counts.get(comp_id, 0) + 1
-            
-            # 4. 透過 ecmp_group_to_nhop table 找出 Component ID 對應的 Port
-            nh_entries = self.api_control.table_get_entries("ecmp_group_to_nhop", False)
-            for entry in nh_entries:
-                c_id = int(entry.match_key[0].data)
-                port = int(entry.action_data.action_params[1])
-                if c_id in comp_counts and port in weights:
-                    weights[port] = comp_counts[c_id]
+            if target_entry is not None:
+                grp_handle = target_entry.action_entry.grp_handle
+                if grp_handle > 0:
+                    grp_info = self.api_control.client.bm_mt_act_prof_get_group(0, "MyIngress.w_ecmp_selector", grp_handle)
+                    members = grp_info.mbr_handles
                     
+                    comp_counts = {}
+                    for m_handle in members:
+                        mbr = self.api_control.client.bm_mt_act_prof_get_member(0, "MyIngress.w_ecmp_selector", m_handle)
+                        if mbr.action_data:
+                            comp_id = int(mbr.action_data[0].hex(), 16)
+                            comp_counts[comp_id] = comp_counts.get(comp_id, 0) + 1
+                    
+                    nh_entries = self.api_control.client.bm_mt_get_entries(0, "MyIngress.ecmp_group_to_nhop")
+                    for entry in nh_entries:
+                        if entry.match_key and entry.match_key[0].exact:
+                            c_id = int(entry.match_key[0].exact.key.hex(), 16)
+                            if entry.action_entry and entry.action_entry.action_data:
+                                port = int(entry.action_entry.action_data[1].hex(), 16)
+                                if c_id in comp_counts and port in weights:
+                                    weights[port] = comp_counts[c_id]
         except Exception as e:
             pass
-            
         return weights
 
     def collect_1s_data(self):

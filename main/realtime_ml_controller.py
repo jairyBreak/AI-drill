@@ -172,11 +172,11 @@ class MLController:
             # 3. 如果 entry_handle 存在，原子性地修改表項指向新群組
             if entry_handle is not None:
                 try:
-                    self._api_control.client.bm_mt_indirect_ws_modify_entry(0, "w_ecmp_table", entry_handle, new_grp)
+                    self._api_control.client.bm_mt_indirect_ws_modify_entry(0, "MyIngress.w_ecmp_table", entry_handle, new_grp)
                 except Exception:
                     # 如果 Thrift RPC 修改失敗，退回到刪除並重新添加的方案
                     try:
-                        self._api_control.table_delete("w_ecmp_table", entry_handle)
+                        self._api_control.table_delete("MyIngress.w_ecmp_table", entry_handle)
                     except Exception:
                         pass
                     entry_handle = None
@@ -240,23 +240,41 @@ class MLController:
     def get_current_weights(self):
         weights = {p: 1 for p in PORTS}
         try:
-            entries = self._api_control.table_get_entries("w_ecmp_table", False)
-            if not entries: return weights
-            grp_handle = entries[0].action_data.action_params[0]
-            grp_info = self._api_control.act_prof_get_group("w_ecmp_selector", grp_handle)
-            members = grp_info.member_handles
-            comp_counts = {}
-            for m_handle in members:
-                mbr = self._api_control.act_prof_get_member("w_ecmp_selector", m_handle)
-                comp_id = int(mbr.action_params[0])
-                comp_counts[comp_id] = comp_counts.get(comp_id, 0) + 1
-            nh_entries = self._api_control.table_get_entries("ecmp_group_to_nhop", False)
-            for entry in nh_entries:
-                c_id = int(entry.match_key[0].data)
-                port = int(entry.action_data.action_params[1])
-                if c_id in comp_counts and port in weights:
-                    weights[port] = comp_counts[c_id]
-        except: pass
+            import socket
+            entries = self._api_control.client.bm_mt_get_entries(0, "MyIngress.w_ecmp_table")
+            if not entries:
+                return weights
+            
+            target_ip_bytes = socket.inet_aton(TARGET_IP)
+            target_entry = None
+            for entry in entries:
+                if entry.match_key and entry.match_key[0].exact and entry.match_key[0].exact.key == target_ip_bytes:
+                    target_entry = entry
+                    break
+            
+            if target_entry is not None:
+                grp_handle = target_entry.action_entry.grp_handle
+                if grp_handle > 0:
+                    grp_info = self._api_control.client.bm_mt_act_prof_get_group(0, "MyIngress.w_ecmp_selector", grp_handle)
+                    members = grp_info.mbr_handles
+                    
+                    comp_counts = {}
+                    for m_handle in members:
+                        mbr = self._api_control.client.bm_mt_act_prof_get_member(0, "MyIngress.w_ecmp_selector", m_handle)
+                        if mbr.action_data:
+                            comp_id = int(mbr.action_data[0].hex(), 16)
+                            comp_counts[comp_id] = comp_counts.get(comp_id, 0) + 1
+                    
+                    nh_entries = self._api_control.client.bm_mt_get_entries(0, "MyIngress.ecmp_group_to_nhop")
+                    for entry in nh_entries:
+                        if entry.match_key and entry.match_key[0].exact:
+                            c_id = int(entry.match_key[0].exact.key.hex(), 16)
+                            if entry.action_entry and entry.action_entry.action_data:
+                                port = int(entry.action_entry.action_data[1].hex(), 16)
+                                if c_id in comp_counts and port in weights:
+                                    weights[port] = comp_counts[c_id]
+        except Exception as e:
+            pass
         return weights
 
     def collect_1s_data(self):
