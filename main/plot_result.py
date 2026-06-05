@@ -25,7 +25,7 @@ OUT_IMG = "research_results/plots/validation/algorithm_comparison.png"
 OUT_IMG_UTIL = "research_results/plots/validation/switch_utilization.png"
 
 # 丟棄前 N 秒暖機 (佇列填充/規則安裝過渡)；可用 warmup=N 覆寫
-DEFAULT_WARMUP_SEC = 3
+DEFAULT_WARMUP_SEC = 5
 
 # label -> (csv 路徑, 顏色)
 DEFAULT_RUNS = {
