@@ -87,6 +87,46 @@ def build_single_port_config(analyzer, src_leaf, dst_leaf, mode):
     return weights, rules
 
 
+def build_drill_config(analyzer, src_leaf, dst_leaf):
+    """為 src_leaf->dst_leaf 產生「單一 component 含全部 spine」的純 DRILL 規則。
+
+    與 build_single_port_config 相反：不是每個 next-hop 一個單埠 component，而是把
+    全部 next-hop 塞進一個 component (comp_id=1, num_nhops=N)，W-ECMP selector 只有
+    一個 member。如此每個封包都進入這個 component，run_drill 在全部 N 個 spine 中
+    隨機抽 2 個 + 記憶埠，挑佇列最短者 —— 純 DRILL，無分組、無加權。
+    回傳 (weights_list, hardware_rules)，格式相容於 LeafController.set_w_ecmp_weights。
+    """
+    try:
+        paths = list(nx.all_shortest_paths(analyzer.G, source=src_leaf, target=dst_leaf))
+    except nx.NetworkXNoPath:
+        return [], []
+
+    # 蒐集所有最短路徑的第一跳 (spine)，依實體 port 排序確保決定性 (與其他 builder 一致)
+    next_hops = {p[1] for p in paths if len(p) > 1}
+    ordered = sorted(
+        next_hops,
+        key=lambda nh: analyzer.topo_json.node_to_node_port_num(src_leaf, nh),
+    )
+    if not ordered:
+        return [], []
+
+    ports_and_macs = [
+        (analyzer.topo_json.node_to_node_port_num(src_leaf, nh),
+         analyzer.topo_json.node_to_node_mac(nh, src_leaf))
+        for nh in ordered
+    ]
+
+    rules = [{
+        'comp_id': 1,
+        'num_nhops': len(ports_and_macs),   # 全部 spine 在同一 component -> DRILL 跨全部選最短佇列
+        'base_port': ports_and_macs[0][0],
+        'ports_and_macs': ports_and_macs,
+    }]
+    weights = [1]   # selector 單一 member -> 所有 flow 都進 comp_id 1
+
+    return weights, rules
+
+
 def install_baseline(mode):
     """在所有 leaf pair 上安裝 ECMP / W-ECMP 靜態轉發 (取代 all_controller 的 4-component 設定)。"""
     if not (os.path.exists('p4app.json') and os.path.exists('topology.json')):
@@ -99,9 +139,17 @@ def install_baseline(mode):
     analyzer = TopologyAnalyzer(p4app, topo)
     leaves = sorted(analyzer.leaf_switches)
 
-    label = "W-ECMP (頻寬加權)" if mode == 'bw' else "ECMP (等權)"
+    if mode == 'drill':
+        label = "DRILL (純 DRILL，跨所有 spine 逐封包選最短佇列)"
+        subtitle = "單一多埠 component，DRILL 啟用"
+    elif mode == 'bw':
+        label = "W-ECMP (頻寬加權)"
+        subtitle = "單埠 component，DRILL 停用"
+    else:
+        label = "ECMP (等權)"
+        subtitle = "單埠 component，DRILL 停用"
     print("\n" + "=" * 60)
-    print(f" 安裝基準演算法：{label}  —— 單埠 component，DRILL 停用")
+    print(f" 安裝基準演算法：{label}  —— {subtitle}")
     print("=" * 60 + "\n")
 
     # Thrift API (act_prof_create_member 等) 會狂印 log，靜音之，只留我們自己的摘要
@@ -115,7 +163,10 @@ def install_baseline(mode):
                     for dst in leaves:
                         if src == dst:
                             continue
-                        weights, rules = build_single_port_config(analyzer, src, dst, mode)
+                        if mode == 'drill':
+                            weights, rules = build_drill_config(analyzer, src, dst)
+                        else:
+                            weights, rules = build_single_port_config(analyzer, src, dst, mode)
                         if not rules:
                             continue
                         ip = analyzer.leaf_to_ip[dst]

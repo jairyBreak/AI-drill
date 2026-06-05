@@ -27,10 +27,15 @@ OUT_IMG_UTIL = "research_results/plots/validation/switch_utilization.png"
 # 丟棄前 N 秒暖機 (佇列填充/規則安裝過渡)；可用 warmup=N 覆寫
 DEFAULT_WARMUP_SEC = 5
 
+# 延遲面板平滑視窗 (取樣點數)。Real_Lat 是每秒「峰值」佇列延遲，峰值統計天生有雜訊，
+# 用滾動平均畫一條趨勢線，原始點則淡化在背景，方便看出 static 其實是穩定的。
+LAT_SMOOTH_WIN = 5
+
 # label -> (csv 路徑, 顏色)
 DEFAULT_RUNS = {
     "ECMP":            (f"{VAL_DIR}/comparison_ecmp.csv",  "#1f77b4"),
     "W-ECMP":          (f"{VAL_DIR}/comparison_wecmp.csv", "#ff7f0e"),
+    "DRILL":           (f"{VAL_DIR}/comparison_drill.csv", "#9467bd"),
     "W-ECMP+DRILL+ML": (f"{VAL_DIR}/comparison_ml.csv",    "#2ca02c"),
 }
 
@@ -146,12 +151,14 @@ def main():
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
 
-    # Panel 1: 硬體延遲
+    # Panel 1: 硬體延遲 — 原始峰值點淡化在背景，疊上滾動平均趨勢線 (峰值統計雜訊大)
     for label, (df, color, x) in loaded.items():
-        axes[0].plot(x, df['Real_Lat'], 'o-', label=label,
-                     color=color, alpha=0.8, markersize=3, linewidth=1.8)
+        smooth = df['Real_Lat'].rolling(LAT_SMOOTH_WIN, center=True, min_periods=1).mean()
+        axes[0].plot(x, df['Real_Lat'], 'o', color=color, alpha=0.18, markersize=3)
+        axes[0].plot(x, smooth, '-', label=label, color=color, alpha=0.95, linewidth=2.2)
     axes[0].set_ylabel("Latency (ms)")
-    axes[0].set_title(f"Algorithm Comparison — Hardware Ground Truth (8-spine, warmup {warmup:.0f}s dropped)")
+    axes[0].set_title(f"Algorithm Comparison — Hardware Ground Truth "
+                      f"(8-spine, warmup {warmup:.0f}s dropped, {LAT_SMOOTH_WIN}-sample rolling mean)")
     axes[0].legend(loc='upper left')
     axes[0].grid(True, linestyle='--', alpha=0.6)
 
