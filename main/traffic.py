@@ -7,6 +7,8 @@ import tempfile
 import argparse
 import threading
 import subprocess
+import signal
+import shutil
 from contextlib import redirect_stdout, redirect_stderr
 
 SOURCE_HOST = "h1"
@@ -24,7 +26,16 @@ FLOW_BWS = [
     "0.08M", "0.08M", "0.08M", "0.08M",
     "0.06M", "0.06M", "0.06M", "0.06M",
 ]  # total = 3.12M
+MICE_BWS = ["0.14M", "0.14M", "0.14M", "0.14M",
+            "0.14M", "0.14M", "0.14M", "0.14M",
+            "0.135M", "0.135M", "0.135M", "0.135M",
+            "0.135M", "0.135M", "0.135M", "0.135M"]  # total = 2.20M
+ELEPHANT_BWS = ["0.46M", "0.46M"]  # total = 0.92M
+MICE_COUNT = 16
+MICE_INTERVAL_S = 5
+ELEPHANT_INTERVAL_S = 15
 STAGGER  = 0.3   # seconds between starting each client (desync TCP timers)
+ELMICE_STAGGER = 0.03
 
 SPINE_CAP   = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
                6: 0.80, 7: 0.80, 8: 0.96, 9: 0.96}
@@ -64,8 +75,7 @@ def _monitor_loop(stop_event):
         return
     prev_t = time.time()
     first  = True
-
-    prev_hdr = None
+    prev_line_count = 0
 
     while not stop_event.is_set():
         time.sleep(1.0)
@@ -90,19 +100,20 @@ def _monitor_loop(stop_event):
         if not parts:
             continue
 
+        width = max(40, shutil.get_terminal_size((120, 20)).columns - 4)
         hdr = _monitor_header
-        if hdr != prev_hdr:
-            # New assignment: print as a static scrolling line, reset in-place block
-            if hdr:
-                sys.stdout.write(f"\r\033[K  {hdr}\n")
-            prev_hdr = hdr
-            first = True
+        display_lines = ([hdr] if hdr else []) + parts
+        display_lines = [
+            line if len(line) <= width else line[:max(0, width - 3)] + "..."
+            for line in display_lines
+        ]
 
-        if not first:
-            sys.stdout.write(f"\033[{len(parts)}A")
-        for line in parts:
+        if not first and prev_line_count > 0:
+            sys.stdout.write(f"\033[{prev_line_count}A")
+        for line in display_lines:
             sys.stdout.write(f"\r\033[K  {line}\n")
         sys.stdout.flush()
+        prev_line_count = len(display_lines)
         first = False
 
     devnull.close()
@@ -127,22 +138,22 @@ def _start_servers():
     return procs
 
 
-def _start_clients(assignment, duration, plot_dir=None):
+def _start_clients(assignment, duration, plot_dir=None, stagger=STAGGER):
     """
     assignment: [(port, bw_str), ...]
-    Clients are started with STAGGER seconds between each to desync TCP timers.
+    Clients are started with stagger seconds between each to desync timers.
     Returns (procs, log_paths).
     """
     procs, logs = [], []
     ivl = ["-i", "1"] if plot_dir else ["-i", "0"]
     for i, (port, bw) in enumerate(assignment):
         if i > 0:
-            time.sleep(STAGGER)
+            time.sleep(stagger)
         lp = os.path.join(plot_dir, f"flow{i}_p{port}.log") if plot_dir else None
         out = open(lp, "w") if lp else subprocess.DEVNULL
         procs.append(subprocess.Popen(
             ["mx", SOURCE_HOST, "iperf3", "-u", "-c", TARGET_IP,
-             "-p", str(port), "-b", bw, "-t", str(duration)] + ivl,
+             "-p", str(port), "-b", bw, "-t", f"{duration:g}"] + ivl,
             stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.DEVNULL,
             preexec_fn=os.setpgrp,
         ))
@@ -158,6 +169,36 @@ def _kill(_procs):
             stderr=subprocess.DEVNULL,
         )
     time.sleep(0.5)
+
+
+def _stop_procs(procs, grace=0.2):
+    """Stop only the client processes we started, preserving servers/elephants."""
+    for p in procs:
+        if p.poll() is not None:
+            continue
+        try:
+            os.killpg(p.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        except Exception:
+            try:
+                p.terminate()
+            except Exception:
+                pass
+    if grace > 0:
+        time.sleep(grace)
+    for p in procs:
+        if p.poll() is not None:
+            continue
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except Exception:
+            try:
+                p.kill()
+            except Exception:
+                pass
 
 
 def _parse_single(path):
@@ -201,7 +242,7 @@ def _plot(series, rotation_times):
 
 # ---------------------------------------------------------------------------
 
-def run_default(plot):
+def run_default(plot, duration):
     _kill([])
     srvs = _start_servers()
     lp = None
@@ -214,15 +255,18 @@ def run_default(plot):
         ivl = ["-i", "0"]
     cli = subprocess.Popen(
         ["mx", SOURCE_HOST, "iperf3", "-u", "-c", TARGET_IP,
-         "-p", str(PORTS[0]), "-b", "0.3M", "-t", "3600"] + ivl,
+         "-p", str(PORTS[0]), "-b", "0.3M",
+         "-t", f"{(duration if duration is not None else 3600):g}"] + ivl,
         stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.DEVNULL,
         preexec_fn=os.setpgrp,
     )
-    print(f"[DEFAULT] 1 flow → {TARGET_IP}:{PORTS[0]} @ 0.3M  (Ctrl+C to stop)")
+    dur_label = f"{duration:g}s" if duration is not None else "Ctrl+C to stop"
+    print(f"[DEFAULT] 1 flow → {TARGET_IP}:{PORTS[0]} @ 0.3M  ({dur_label})")
     _mon = _start_monitor()
+    start = time.time()
     try:
-        while True:
-            time.sleep(1)
+        while duration is None or time.time() - start < duration:
+            time.sleep(0.5)
     except KeyboardInterrupt:
         pass
     _kill([cli])
@@ -232,21 +276,24 @@ def run_default(plot):
         _plot([("0.3M", [d[0] for d in data], [d[1] for d in data])], [])
 
 
-def run_static(plot):
+def run_static(plot, duration):
     _kill([])
     srvs = _start_servers()
     bws = FLOW_BWS[:]
     random.shuffle(bws)
     assignment = list(zip(PORTS, bws))
     log_dir = tempfile.mkdtemp() if plot else None
-    clients, logs = _start_clients(assignment, duration=3600, plot_dir=log_dir)
-    print("[STATIC] Flow assignment (Ctrl+C to stop):")
+    client_duration = duration if duration is not None else 3600
+    clients, logs = _start_clients(assignment, duration=client_duration, plot_dir=log_dir)
+    dur_label = f"{duration:g}s" if duration is not None else "Ctrl+C to stop"
+    print(f"[STATIC] Flow assignment ({dur_label}):")
     for port, bw in assignment:
         print(f"  port {port}: {bw}")
     _mon = _start_monitor()
+    start = time.time()
     try:
-        while True:
-            time.sleep(1)
+        while duration is None or time.time() - start < duration:
+            time.sleep(0.5)
     except KeyboardInterrupt:
         pass
     _kill(clients)
@@ -259,7 +306,7 @@ def run_static(plot):
         _plot(series, [])
 
 
-def run_dynamic(plot):
+def run_dynamic(plot, duration):
     global _monitor_header
     _kill([])
     _mon = _start_monitor()
@@ -283,7 +330,7 @@ def run_dynamic(plot):
                 port_series[port][1].append(m)
 
     try:
-        while True:
+        while duration is None or time.time() - start_t < duration:
             elapsed = time.time() - start_t
             rotation_times.append(elapsed)
 
@@ -315,7 +362,10 @@ def run_dynamic(plot):
                                "  ".join(f"{p}:{bw}" for p, bw in assignment))
 
             rotation += 1
-            time.sleep(INTERVAL_S)
+            if duration is None:
+                time.sleep(INTERVAL_S)
+            else:
+                time.sleep(min(INTERVAL_S, max(0.0, duration - (time.time() - start_t))))
 
     except KeyboardInterrupt:
         pass
@@ -335,6 +385,128 @@ def run_dynamic(plot):
         _plot(series, rotation_times)
 
 
+def run_elmice(duration, plot):
+    global _monitor_header
+    _kill([])
+    _mon = _start_monitor()
+    srvs = _start_servers()
+    log_dir = tempfile.mkdtemp() if plot else None
+
+    elephant_clients, elephant_logs = [], []
+    mice_clients, mice_logs = [], []
+    elephant_assignment, mice_assignment = [], []
+    rotation_times = []
+    port_series = {p: ([], []) for p in PORTS}
+    start_t = time.time()
+    next_elephant = 0.0
+    next_mice = 0.0
+    elephant_round = 0
+    mice_round = 0
+    elephant_count = len(ELEPHANT_BWS)
+
+    def _collect(assignment, logs, offset):
+        for (port, _), lp in zip(assignment, logs):
+            for t, m in _parse_single(lp):
+                port_series[port][0].append(offset + t)
+                port_series[port][1].append(m)
+
+    def _new_elephants(elapsed):
+        nonlocal elephant_clients, elephant_logs, elephant_assignment, elephant_round
+        if plot and elephant_assignment:
+            _collect(elephant_assignment, elephant_logs, max(0.0, elapsed - ELEPHANT_INTERVAL_S))
+        _stop_procs(elephant_clients)
+
+        ports = PORTS[:]
+        random.shuffle(ports)
+        selected = sorted(ports[:elephant_count])
+        bws = ELEPHANT_BWS[:]
+        random.shuffle(bws)
+        elephant_assignment = list(zip(selected, bws))
+
+        rot_dir = None
+        if plot:
+            rot_dir = os.path.join(log_dir, f"elephant_r{elephant_round}")
+            os.makedirs(rot_dir)
+        client_duration = ELEPHANT_INTERVAL_S + MICE_INTERVAL_S + len(elephant_assignment) * ELMICE_STAGGER + 5
+        elephant_clients, elephant_logs = _start_clients(
+            elephant_assignment, client_duration, rot_dir, stagger=ELMICE_STAGGER)
+        elephant_round += 1
+
+    def _new_mice(elapsed):
+        nonlocal mice_clients, mice_logs, mice_assignment, mice_round
+        if plot and mice_assignment:
+            _collect(mice_assignment, mice_logs, max(0.0, elapsed - MICE_INTERVAL_S))
+        _stop_procs(mice_clients)
+
+        elephant_ports = {p for p, _ in elephant_assignment}
+        mouse_ports = [p for p in PORTS if p not in elephant_ports]
+        random.shuffle(mouse_ports)
+        mouse_ports = sorted(mouse_ports[:min(MICE_COUNT, len(mouse_ports))])
+        bws = MICE_BWS[:len(mouse_ports)]
+        random.shuffle(bws)
+        mice_assignment = list(zip(mouse_ports, bws))
+
+        rot_dir = None
+        if plot:
+            rot_dir = os.path.join(log_dir, f"mice_r{mice_round}")
+            os.makedirs(rot_dir)
+        client_duration = MICE_INTERVAL_S + len(mice_assignment) * ELMICE_STAGGER + 3
+        mice_clients, mice_logs = _start_clients(
+            mice_assignment, client_duration, rot_dir, stagger=ELMICE_STAGGER)
+        mice_round += 1
+
+    print("[ELMICE] Persistent elephant + fast-changing mice")
+    dur_label = f"{duration:g}s" if duration is not None else "Ctrl+C to stop"
+    print(f"  duration: {dur_label}")
+    print(f"  elephants: {len(ELEPHANT_BWS)} flows x {ELEPHANT_BWS}, rotate every {ELEPHANT_INTERVAL_S}s")
+    print(f"  mice: {MICE_COUNT} flows x {MICE_BWS}, rotate every {MICE_INTERVAL_S}s")
+    print(f"  elmice client stagger: {ELMICE_STAGGER}s")
+
+    try:
+        while duration is None or time.time() - start_t < duration:
+            elapsed = time.time() - start_t
+            if elapsed >= next_elephant:
+                rotation_times.append(elapsed)
+                if plot and mice_assignment:
+                    _collect(mice_assignment, mice_logs, max(0.0, elapsed - MICE_INTERVAL_S))
+                _stop_procs(mice_clients)
+                mice_clients, mice_logs, mice_assignment = [], [], []
+                _new_elephants(elapsed)
+                next_elephant = elapsed + ELEPHANT_INTERVAL_S
+                next_mice = elapsed
+
+            if elapsed >= next_mice:
+                rotation_times.append(elapsed)
+                _new_mice(elapsed)
+                next_mice = elapsed + MICE_INTERVAL_S
+
+            _monitor_header = (
+                f"[t={elapsed:.0f}s] elephant "
+                + " ".join(f"{p}:{bw}" for p, bw in elephant_assignment)
+                + f" | mice {len(mice_assignment)} flows, total 2.20M"
+            )
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+
+    elapsed = time.time() - start_t
+    _stop_procs(mice_clients)
+    _stop_procs(elephant_clients)
+    if plot:
+        if mice_assignment:
+            _collect(mice_assignment, mice_logs, max(0.0, elapsed - MICE_INTERVAL_S))
+        if elephant_assignment:
+            _collect(elephant_assignment, elephant_logs, max(0.0, elapsed - ELEPHANT_INTERVAL_S))
+    _kill(srvs)
+
+    if plot:
+        series = [
+            (f"port {p}", port_series[p][0], port_series[p][1])
+            for p in PORTS
+        ]
+        _plot(series, sorted(set(rotation_times)))
+
+
 # ---------------------------------------------------------------------------
 
 def main():
@@ -344,16 +516,22 @@ def main():
                      help="18 flows (fixed BW assignment)")
     grp.add_argument("--dynamic", action="store_true",
                      help="18 flows, BW rotates randomly every 10s")
+    grp.add_argument("--elmice", action="store_true",
+                     help="2 persistent elephants plus 16 fast-changing mice flows")
+    parser.add_argument("duration", nargs="?", type=float,
+                        help="duration in seconds; omitted means run until Ctrl+C")
     parser.add_argument("--plot", action="store_true",
                         help="Capture and plot per-flow throughput at exit")
     args = parser.parse_args()
 
     if args.static:
-        run_static(args.plot)
+        run_static(args.plot, args.duration)
     elif args.dynamic:
-        run_dynamic(args.plot)
+        run_dynamic(args.plot, args.duration)
+    elif args.elmice:
+        run_elmice(args.duration, args.plot)
     else:
-        run_default(args.plot)
+        run_default(args.plot, args.duration)
 
 
 if __name__ == "__main__":

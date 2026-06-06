@@ -27,10 +27,6 @@ OUT_IMG_UTIL = "research_results/plots/validation/switch_utilization.png"
 # 丟棄前 N 秒暖機 (佇列填充/規則安裝過渡)；可用 warmup=N 覆寫
 DEFAULT_WARMUP_SEC = 5
 
-# 延遲面板平滑視窗 (取樣點數)。Real_Lat 是每秒「峰值」佇列延遲，峰值統計天生有雜訊，
-# 用滾動平均畫一條趨勢線，原始點則淡化在背景，方便看出 static 其實是穩定的。
-LAT_SMOOTH_WIN = 5
-
 # label -> (csv 路徑, 顏色)
 DEFAULT_RUNS = {
     "ECMP":            (f"{VAL_DIR}/comparison_ecmp.csv",  "#1f77b4"),
@@ -151,14 +147,13 @@ def main():
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
 
-    # Panel 1: 硬體延遲 — 原始峰值點淡化在背景，疊上滾動平均趨勢線 (峰值統計雜訊大)
+    # Panel 1: 硬體延遲 — 每秒峰值佇列延遲原始值 (不平滑；峰值本身就是該秒的最壞情況)
     for label, (df, color, x) in loaded.items():
-        smooth = df['Real_Lat'].rolling(LAT_SMOOTH_WIN, center=True, min_periods=1).mean()
-        axes[0].plot(x, df['Real_Lat'], 'o', color=color, alpha=0.18, markersize=3)
-        axes[0].plot(x, smooth, '-', label=label, color=color, alpha=0.95, linewidth=2.2)
-    axes[0].set_ylabel("Latency (ms)")
+        axes[0].plot(x, df['Real_Lat'], 'o-', label=label,
+                     color=color, alpha=0.8, markersize=3, linewidth=1.8)
+    axes[0].set_ylabel("Latency (ms, per-sec peak)")
     axes[0].set_title(f"Algorithm Comparison — Hardware Ground Truth "
-                      f"(8-spine, warmup {warmup:.0f}s dropped, {LAT_SMOOTH_WIN}-sample rolling mean)")
+                      f"(8-spine, warmup {warmup:.0f}s dropped; tail stats in summary table)")
     axes[0].legend(loc='upper left')
     axes[0].grid(True, linestyle='--', alpha=0.6)
 
@@ -187,15 +182,18 @@ def main():
     # 各交換機利用率 (另存一張圖)
     plot_switch_utilization(loaded, OUT_IMG_UTIL)
 
-    # 摘要統計表 (Loss = 端到端累積丟包率；Util σ = 跨 spine 利用率標準差，越小越平衡)
-    print(f"\n=== 平均指標摘要 (丟棄前 {warmup:.0f}s 暖機) ===")
-    print(f"{'演算法':^18} | {'Lat(ms)':^9} | {'Loss(%)E2E':^11} | {'Mbps':^7} | {'Util σ':^7}")
-    print("-" * 66)
+    # 摘要統計表 — 延遲以每秒峰值的 p50/p95/max 表示 (尾延遲才是 load balancer 的重點，
+    # 不用平均，避免把峰值平均掉)；Loss = 端到端累積丟包率；Util σ = 跨 spine 利用率標準差 (越小越平衡)
+    print(f"\n=== 指標摘要 (丟棄前 {warmup:.0f}s 暖機；延遲為每秒峰值的分位數) ===")
+    print(f"{'演算法':^18} | {'Lat p50':^8} | {'Lat p95':^8} | {'Lat max':^8} | "
+          f"{'Loss(%)E2E':^11} | {'Mbps':^7} | {'Util σ':^7}")
+    print("-" * 88)
     for label, (df, _, _) in loaded.items():
         util_cols = sorted([c for c in df.columns if c.startswith('util_s')],
                            key=lambda c: int(c[len('util_s'):]))
         sigma = float(np.std([df[c].mean() for c in util_cols])) if util_cols else float('nan')
-        print(f"{label:^18} | {df['Real_Lat'].mean():7.2f} | "
+        lat = df['Real_Lat']
+        print(f"{label:^18} | {lat.median():8.2f} | {lat.quantile(0.95):8.2f} | {lat.max():8.2f} | "
               f"{end_to_end_loss(df):9.2f} | {df['Total_Mbps'].mean():6.2f} | {sigma:6.3f}")
 
 
