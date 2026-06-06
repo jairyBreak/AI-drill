@@ -227,7 +227,12 @@ Run: `python3 train_1s_models.py`
 
 ## Stage 1 + 2: Real-Time Controller (`realtime_ml_controller.py`)
 
-`MLController` runs passively (no traffic injected). 1-second control loop:
+`MLController` runs passively (injects no traffic). It controls **only the l1→l2 W-ECMP class
+weights**; DRILL inside each class and the rest of the fabric are untouched. The design target is
+**elephant/mice** traffic: the controller does not know which flow is an elephant — an elephant simply
+reveals itself as sustained queue/util on whichever class it hashes to, and the controller responds by
+**shedding that class's weight** so fewer (mostly mouse) flows hash into it. DRILL inside the class
+already steers packets to the non-elephant port.
 
 ### Per-second loop
 1. **`collect_1s_data()`** — reads l2 hardware registers for all 8 spine ports:
@@ -235,20 +240,70 @@ Run: `python3 train_1s_models.py`
    - `port_bytes_counter` delta → Mbps
    - l1 `cnt_enq` vs l2 `cnt_ingress` delta → hardware drop rate
    - Reads current ECMP weights from l1's action profile; flags rehash events
-2. **Feature transform** — appends row to 100-entry rolling deque, calls `transform_to_topo_independent(K=3)`, takes the latest row as a 39-feature vector
-3. **Prediction** — runs all loaded models; applies exponential smoothing to latency/loss. Falls back to reactive thresholds if 1s models are missing.
-4. **`control_step()`** — decides whether to rebalance:
-   - Skip if within 4s cooldown or `max_util < 0.1`
-   - Trigger if: `anomaly==1`, `max_util > 0.6`, `queue_imbalance > 15`, `latency > 200ms`, `loss > 2%`
-5. **`compute_weights()`** — scores each ECMP component by `free_bw × queue_headroom`, normalizes to integers in `[1, 8]`
-6. **`apply_weights()`** — rewrites l1 action profile members in-place (same group handle — table entry is never cleared, other l1 routes are undisturbed)
+2. **Feature transform** — appends row to a 100-entry rolling deque, calls `transform_to_topo_independent(K=3)`, takes the latest row as a 39-feature vector
+3. **Prediction** — runs all loaded RF models; applies exponential smoothing to latency/loss. The control path also works **without** the models via hardware-evidence triggers (below).
+4. **`control_step()`** — decide whether/how to rebalance (see Control logic).
+5. **`compute_weights()`** — anchored bounded correction (see below).
+6. **`apply_weights()`** — build a fresh action-profile group, **atomically repoint** the `w_ecmp_table` entry to it (hitless — no forwarding gap), then free the old group.
+
+### Control logic (anchor-and-correct)
+
+The earlier controller oscillated: every weight change rebuilds the selector group and — because BMv2's
+`action_selector` is **not** consistent-hashing — reshuffles *all* flows; measuring during that
+transient caused over-correction. Key fix: rehash cost is magnitude-independent, so stability comes
+from changing **rarely**, not by small steps.
+
+**Tuning constants** (top of file):
+
+| Const | Value | Role |
+|---|---|---|
+| `RATE_LIMIT_SCALE` | 0.8 | effective capacity = link bw × this (matches `rate_limiter.py`) |
+| `IMBALANCE_TOL` | 0.15 | no-action band, sized *between* a mouse (~0.13) and elephant (~0.21+) util bump |
+| `WEIGHT_BOUND` | 2 | max deviation of any weight from its anchor |
+| `CORRECTION_GAIN` | 0.5 | proportional gain of the shed/boost |
+| `Q_WEIGHT` | 0.5 | how much queue pressure adds to a class's hotness |
+| `QDEPTH_HOT` | 32 | queue depth (of the 64-deep cap) marking a class congested |
+| `UTIL_SAT` | 0.90 | absolute "class near its own limit" threshold (effective util) |
+| `COOLDOWN_SEC` | 6 | min spacing between rehashes |
+| `SETTLE_SEC` | 2 | post-rehash measurement blackout |
+| `PERSIST_TICKS` / `RELAX_TICKS` | 2 / 6 | ticks an imbalance / cold-class must persist before acting |
+
+**Signals** (`_component_stats` → `_class_pressure`):
+- `util_i = Σ raw mbps / Σ (link bw × RATE_LIMIT_SCALE)` — uses **effective** capacity from the topology graph, so it is independent of the `CAPACITY` constant.
+- `qfrac_i = max port queue depth in class / QDEPTH_HOT`.
+- `pressure_i = util_i + Q_WEIGHT · max(0, qfrac_i − 1)` — drives *both* hot-class selection and the correction, so a queue-building elephant is caught before util saturates.
+
+**Anchor + correction** (`compute_weights`): anchor = capacity-proportional weights `[3,4,5,6]` taken
+from `get_ecmp_weights_and_rules` (the same source the dataplane was installed with). For each class:
+`desired = base · (1 − CORRECTION_GAIN · (pressure_i − mean) / mean)`, clamped to `base ± WEIGHT_BOUND`
+then to `[1,8]` and rounded. Hot classes shed, cold classes boost; as imbalance → 0, `desired → base`,
+so it relaxes toward the anchor by construction.
+
+**Decision order** (`control_step`):
+1. **Settle blackout** — if within `SETTLE_SEC` of the last rehash, return (don't measure transients).
+2. **Shed (hot class)** — if the hottest class is genuinely hot *and* there's harm evidence:
+   `hw_bad` (real hardware loss > threshold, any `qfrac ≥ 1`, or `mean util > UTIL_SAT`) fires
+   immediately; the RF model can also fire it but only after `PERSIST_TICKS`. Respects `COOLDOWN_SEC`.
+   If the computed weights equal the current ones (already at the bound), it logs *"cannot improve via
+   weights"* instead of churning.
+3. **Relax (evidence-based)** — if a class that was shed below its anchor goes **cold**
+   (`util < mean − IMBALANCE_TOL`) for `RELAX_TICKS`, the elephant has left → jump back to the anchor in
+   one rehash. On static traffic the elephant keeps its class warm, so this never fires → controller
+   **freezes**; on dynamic traffic it returns to `[3,4,5,6]` once load drops.
+4. **Balanced overload** — balanced but high real loss / util → log *"no weight solution"* (weights
+   can't fix aggregate overload), no rehash.
+5. Otherwise freeze. Passive-state logs are deduped (`_state_log`) so they don't spam the monitor line.
+
+**Robustness:** `_sync_from_dataplane()` at startup reads the live group/member handles and per-class
+weights instead of assuming the install succeeded (and so the first weight change frees the install's
+group cleanly). `_safe_apply` rebuilds the Thrift connection and reverts on RPC failure.
 
 ### Display
 Overwrites one terminal line per second:
 ```
 [16:07:25] NORMAL  | Lat:  20.0/  9.1ms | Loss:  0.0/ 0.0% | Util: 0.10
 ```
-Format: `predicted / hardware_ground_truth`. Weight changes print on a new line.
+Format: `predicted / hardware_ground_truth`. Weight changes (`shed/boost`, `relax → anchor`) print on a new line.
 
 ---
 
@@ -258,18 +313,46 @@ Format: `predicted / hardware_ground_truth`. Weight changes print on a new line.
 - `--default`: 1 flow at 0.3 Mbps
 - `--static`: all 18 flows with a shuffled fixed BW assignment
 - `--dynamic`: flows reshuffle to a new random BW assignment every ~10s
+- `--elmice`: **elephant/mice** — 2 persistent elephants (0.46M, rotate every 15s) + 16 mice (0.14M, rotate every 5s)
 
 Live spine monitor overlay (in-place overwrite, 8 lines): reads `q_depth_reg` from l1 and `port_bytes_counter` from l2.
 
 ---
 
+## Evaluation (`test.sh` + `plot_result.py`)
+
+`baseline_ecmp.py`, `baseline_wecmp.py`, and `baseline_drill.py` run the **same** `p4src/ecmp.p4` dataplane with only the control-plane config changed, so all four algorithms are directly comparable. `test.sh` sweeps them for a given duration; `plot_result.py` overlays the per-second CSVs and prints a summary (first 5s dropped as warmup). Latency is the per-second **peak** queue delay; Util σ is the standard deviation of mean per-spine utilization (lower = better balanced).
+
+All four are the same pipeline with a different W-ECMP/DRILL component layout (`baseline_common.py`):
+
+| Algorithm | Components | Weights | DRILL |
+|---|---|---|---|
+| ECMP | 8 single-port | all equal | off (`num_nhops=1`) |
+| W-ECMP | 8 single-port | ∝ bandwidth (3/3/4/4/5/5/6/6) | off |
+| DRILL | 1 component, all 8 ports | trivial | on across all 8 (`num_nhops=8`) |
+| W-ECMP+DRILL+ML | 4 capacity-pair components | ML-controlled `[3,4,5,6]±` | on within each pair (`num_nhops=2`) |
+
+**Elephant/mice (`--elmice`), 60s, 5s warmup dropped:**
+
+| Algorithm | Lat p50 | Lat p95 | Lat max | Loss E2E | Mbps | Util σ |
+|---|--:|--:|--:|--:|--:|--:|
+| ECMP | 101.35 | 251.54 | 564.74 | 0.00 | 2.65 | 0.160 |
+| W-ECMP | 37.66 | 334.10 | 457.67 | 0.00 | 2.62 | 0.161 |
+| DRILL | **22.57** | 170.42 | 340.47 | 0.00 | 2.86 | 0.148 |
+| **W-ECMP+DRILL+ML** | 32.04 | **160.17** | **176.28** | 0.00 | 2.83 | **0.062** |
+
+**Takeaway:** on elephant/mice traffic the full **W-ECMP+DRILL+ML** controller delivers the best tail latency — lowest p95 and a dramatically lower max (176ms vs 340–565ms) — and by far the most balanced spine utilization (σ 0.062, ~half of every other approach), while staying within a few ms of DRILL on median. Pure DRILL has the lowest median but is capacity-blind (worse tail and σ); static ECMP/W-ECMP are worst on the tail. (`traffic.py` currently reshuffles assignments per run, so seed it for a strictly fair head-to-head.)
+
+---
+
 ## Known Gaps
 
-1. **1s models missing** — `rf_model_*_1s.pkl` don't exist. Controller uses reactive thresholds only. Run `rolling_dataset_builder.py` (data), then fix the CAPACITY bug, then `train_1s_models.py`.
-2. **`train_1s_models.py` CAPACITY bug** — feature engineering uses wrong capacity values (see above). Models trained with these values will have miscalibrated utilization features.
+1. **1s models missing** — `rf_model_*_1s.pkl` don't exist. The controller still operates via its **hardware-evidence triggers** (real loss / queue / util); RF predictions are an optional secondary path. To train: `rolling_dataset_builder.py` (data) → `train_1s_models.py`.
+2. **`train_1s_models.py` / `realtime_1s_predictor.py` CAPACITY bug** — these use raw `{2:0.8, …}` instead of the effective rate-limited `{2:0.48, …}`, so models trained from them get miscalibrated utilization features. The **live controller is unaffected** — it derives effective capacity (link bw × 0.8) itself.
 3. **10s models trained on s1–s4 only** — `telemetry_collector.py` reads ports 2–5. s5–s8 were invisible during collection. Simplified models have no knowledge of the higher-BW spine pair.
 4. **10s dataset used 2 ECMP components** — `dataset_builder.py` applied 2-element weight lists. The network has 4 components. Old models never saw s5–s8 weighted.
-5. **No evaluation baseline** — no script compares controller performance against equal-weight ECMP under identical traffic.
+5. ~~No evaluation baseline~~ **(resolved)** — `baseline_{ecmp,wecmp,drill}.py` + `test.sh` + `plot_result.py` compare all four algorithms on the same dataplane. See **Evaluation** above.
+6. **Comparison runs not seeded** — `traffic.py` reshuffles flow→port assignments per invocation, so the four algorithms don't see byte-identical traffic. Seed it before publishing head-to-head numbers.
 
 ---
 
@@ -302,8 +385,12 @@ Live spine monitor overlay (in-place overwrite, 8 lines): reads `q_depth_reg` fr
 | `topo_independent_helper.py` | Converts raw 8-port measurements to 39 topology-agnostic features |
 | `train_simplified_models.py` | **Active 10s training script** — 32-feature RF on ECDF-cleaned dataset |
 | `train_1s_models.py` | **Active 1s training script** — 39-feature RF on rolling dataset |
-| `realtime_ml_controller.py` | **Active live controller** — 1s observe/predict/act loop |
-| `traffic.py` | iperf3 traffic generator with live spine monitor overlay |
+| `realtime_ml_controller.py` | **Active live controller** — 1s anchor-and-correct loop (W-ECMP+DRILL+ML) |
+| `baseline_common.py` | Shared baseline install/measure logic (per-algorithm component layouts) |
+| `baseline_ecmp.py` / `baseline_wecmp.py` / `baseline_drill.py` | Static baselines on the same dataplane |
+| `test.sh` | Sweeps ML / DRILL / ECMP / W-ECMP for a given duration |
+| `plot_result.py` | Overlays the four comparison CSVs + prints the summary table |
+| `traffic.py` | iperf3 traffic generator (`--static/--dynamic/--elmice`) with live spine monitor |
 | `iperf_parser.py` | iperf3 UDP + concurrent ping → latency/jitter/loss labels |
 | `build_ecdf_features.py` | ECDF rank-transform + 3 composite congestion indices |
 | `research_results/data/datasets/training_dataset_ecdf_cleaned.csv` | Active 10s training dataset (~4887 rows, 134 cols) |
