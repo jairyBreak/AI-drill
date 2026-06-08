@@ -489,9 +489,10 @@ class MLController:
                 weights[port] = weight
         return weights
 
-    def collect_1s_data(self):
+    def collect_1s_data(self, sleep_before=True):
         """採集 1 秒的數據點與硬體真實數據"""
-        time.sleep(1.0)
+        if sleep_before:
+            time.sleep(1.0)
         now_t        = time.time()
         # dt = 與上次取樣的真實間隔 (含處理時間)；不可只用 sleep(1.0)，否則處理較慢時吞吐量會被高估
         dt           = now_t - self._prev_sample_t
@@ -579,11 +580,19 @@ class MLController:
 
         results = []
         start = time.time()
+        next_tick = start
         try:
             while True:
-                if duration is not None and time.time() - start >= duration:
+                next_tick += 1.0
+                if duration is not None and next_tick - start > duration:
                     break
-                data_row = self.collect_1s_data()
+                sleep_for = next_tick - time.time()
+                if sleep_for > 0:
+                    time.sleep(sleep_for)
+                else:
+                    next_tick = time.time()
+
+                data_row = self.collect_1s_data(sleep_before=False)
                 self.raw_history.append(data_row)
 
                 df_history     = pd.DataFrame(list(self.raw_history))
