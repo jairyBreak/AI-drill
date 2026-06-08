@@ -268,93 +268,55 @@ class RollingDataBrain:
         df.to_csv(MASTER_CSV, mode='a', index=False, header=not os.path.exists(MASTER_CSV))
 
     def get_diverse_params(self, iteration_id):
-        state_idx = iteration_id % 10
         _ , rules = self.analyzer.get_ecmp_weights_and_rules(CONTROL_LEAF, TARGET_LEAF)
         num_comp = len(rules) if len(rules) > 0 else 1
-
-        if state_idx < 2: 
-            # 狀態 0-1: 一般負載 (Normal) - 幾乎無丟包
-            weights = [random.randint(2, 4) for _ in range(num_comp)]
-            load = random.uniform(0.10, 0.15)
-            flows = random.randint(10, 20)
-        elif state_idx == 2: 
-            # 狀態 2: 極少數大流 (Elephant flows) - 偶發局部丟包
-            weights = [random.randint(1, 3) for _ in range(num_comp)]
-            load = random.uniform(0.30, 0.60) 
-            flows = random.randint(1, 4)
-        elif state_idx == 3: 
-            # 狀態 3: 權重不平衡 (Weight imbalance) - 易產生局部丟包
-            weights = [1] * num_comp
-            if num_comp > 0: weights[random.randint(0, num_comp-1)] = 10
-            load = random.uniform(0.15, 0.25)
-            flows = random.randint(15, 20)
-        elif state_idx == 4: 
-            # 狀態 4: 臨界滿載 (Near Capacity) - 輕微丟包
-            weights = [random.randint(1, 3) for _ in range(num_comp)]
-            load = random.uniform(0.20, 0.25)
-            flows = random.randint(15, 20)
-        elif state_idx == 5: 
-            # 狀態 5: ⚠️ 全面超載 (Massive Overload) - 保證嚴重丟包
-            # 總負載 = 20*0.5M = 10M，遠超 4.0M 總頻寬
-            weights = [random.randint(1, 2) for _ in range(num_comp)]
-            load = random.uniform(0.40, 0.60)
-            flows = random.randint(20, 25)
-        elif state_idx == 6: 
-            # 狀態 6: ⚠️ 巨型象流衝突 (Extreme Elephant Clash) - 保證嚴重局部丟包
-            # 單一流負載達 2.0M，只要撞進同一個 Port 瞬間塞爆
-            weights = [random.randint(1, 3) for _ in range(num_comp)]
-            load = random.uniform(1.50, 2.50)
-            flows = random.randint(2, 4)
-        elif state_idx == 7:
-            # 狀態 7: ⚠️ 大量微流衝擊 (Microburst DDoS) - 佇列瞬間滿載丟包
-            weights = [random.randint(1, 4) for _ in range(num_comp)]
-            load = random.uniform(0.15, 0.20)
-            flows = random.randint(40, 60)
-        elif state_idx == 8:
-            # 狀態 8: ⚠️ 惡劣路由+高負載 (Bad Routing + High Load) - 保證嚴重丟包
-            weights = [1] * num_comp
-            if num_comp > 0: weights[random.randint(0, num_comp-1)] = 15
-            load = random.uniform(0.30, 0.40)
-            flows = random.randint(15, 25)
-        else:
-            # 狀態 9: 隨機混沌狀態 (Chaos)
-            weights = [random.randint(1, 10) for _ in range(num_comp)]
-            load = random.uniform(0.10, 0.80)
-            flows = random.randint(5, 30)
+        weights = [random.randint(1, 10) for _ in range(num_comp)]
         
-        return weights, f"{load:.2f}M", flows
+        # 依照 0.2 : 0.3 : 0.5 的比例挑選模式
+        idx = iteration_id % 10
+        if idx < 2:
+            mode = "--static"
+        elif idx < 5:
+            mode = "--dynamic"
+        else:
+            mode = "--elmice"
+        
+        # traffic.py總負載固定約3.12M，共18條流
+        avg_load = 3.12 / 18
+        return weights, mode, f"{avg_load:.3f}M", 18
 
     def run_experiment(self, exp_id):
         print(f"\n=== 開始長連線實驗 #{exp_id} ===")
         
-        # 標記整批流量開始的時間
         self.traffic_start_time = time.time()
-        # 剛開始時沒有所謂的"上次Rehash"
         self.last_rehash_time = time.time()
         
-        weights, load_str, flows = self.get_diverse_params(exp_id)
+        weights, mode, load_str, flows = self.get_diverse_params(exp_id)
         self.apply_weights(weights)
         self.reset_switch_stats()
         
         self.current_load = load_str
         self.current_flows = flows
         
-        if os.path.exists(IPERF_LOG): os.remove(IPERF_LOG)
+        duration_sec = 120
+        traffic_cmd = ["sudo", "python3", "traffic.py", mode, "--no-monitor", str(duration_sec)]
+        p_traffic = subprocess.Popen(traffic_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        # 啟動背景流量
-        iperf_cmd = ["mx", "h1", "iperf3", "-c", TARGET_IP, "-u", "-b", self.current_load, "-t", "120", "-P", str(self.current_flows), "-p", str(IPERF_PORT), "-l", "1400", "--logfile", IPERF_LOG]
-        p_iperf = subprocess.Popen(iperf_cmd)
-        
-        print(f"  [流量] {self.current_flows} 條 x {self.current_load} | INT 遙測中")
+        print(f"  [流量] traffic.py {mode} | INT 遙測中")
         
         for i in range(4):
             if i > 0:
                 _ , rules = self.analyzer.get_ecmp_weights_and_rules(CONTROL_LEAF, TARGET_LEAF)
                 self.apply_weights([random.randint(1, 10) for _ in range(len(rules))])
-            self.collect_and_save(30)
+            self.collect_and_save(duration_sec // 4)
         
-        p_iperf.terminate()
-        subprocess.run(["sudo", "pkill", "-f", "iperf3 -c"], stderr=subprocess.DEVNULL)
+        try:
+            p_traffic.terminate()
+            p_traffic.wait(timeout=5)
+        except Exception:
+            pass
+        subprocess.run(["sudo", "pkill", "-9", "-f", "traffic.py"], stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "pkill", "-9", "-f", "iperf3"], stderr=subprocess.DEVNULL)
 
 def main():
     subprocess.run(["sudo", "pkill", "-f", "iperf3"], stderr=subprocess.DEVNULL)
