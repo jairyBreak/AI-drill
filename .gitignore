@@ -60,5 +60,8 @@ main/DETAILED_COLUMN_REFERENCE.txt
 main/analyze.sh
 main/detailed_analysis.sh
 
+# Generated at startup by start_env.sh / all_controller.py --summary
+main/.grouping_summary.txt
+
 
 project_report.md

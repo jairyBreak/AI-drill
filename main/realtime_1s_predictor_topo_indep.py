@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.ERROR)
 CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 PORTS = list(range(2, 10))
-CAPACITY = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64, 6: 0.8, 7: 0.8, 8: 0.96, 9: 0.96}
+CAPACITY = {2: 0.48, 3: 0.56, 4: 0.64, 5: 0.72, 6: 0.80, 7: 0.88, 8: 0.96, 9: 1.04}
 SRC_ID = 1
 
 MODELS = {

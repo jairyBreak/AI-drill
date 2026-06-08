@@ -37,8 +37,9 @@ TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2"
 SRC_ADD = 1
 PORTS = list(range(2, 10))
-CAPACITY = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
-            6: 0.80, 7: 0.80, 8: 0.96, 9: 0.96}
+# 8 個不同頻寬的非對稱拓樸 (p4app bw 0.6~1.3，rate_limiter ×0.8 後的有效容量)
+CAPACITY = {2: 0.48, 3: 0.56, 4: 0.64, 5: 0.72,
+            6: 0.80, 7: 0.88, 8: 0.96, 9: 1.04}
 
 # ---- 權重控制總開關 ----
 # True  -> 完整 W-ECMP+DRILL+ML：啟動裝 anchor，之後 control_step 依 (反應式/ML) 證據動態調權。
@@ -46,7 +47,7 @@ CAPACITY = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
 #          「權重永不變動」，完全不參考 ML 預測或任何指標；class 內仍由 dataplane DRILL 逐封包
 #          選最短佇列。等同 W-ECMP+DRILL baseline，但仍走本控制器的量測/記錄路徑 (相同 CSV
 #          欄位，供 plot_result.py 公平比較)。
-ML_WEIGHT_ENABLE = False
+ML_WEIGHT_ENABLE = True
 
 # ---- 控制器穩定性參數 (大象/老鼠流量；錨定容量比例 + 有界修正) ----
 # 設計：流量是大象 (0.24~0.40M) + 老鼠 (0.06~0.16M) 混合，事先不知誰是大象。
@@ -61,7 +62,7 @@ SETTLE_SEC           = 2        # rehash 後的量測黑窗：過渡態不可信
 PERSIST_TICKS        = 2        # 不平衡需連續成立幾拍才動手 (濾掉過渡/雜訊；大象的熱會持續)
 RELAX_TICKS          = 6        # 被 shed 的 class 連續轉冷這麼多拍 (=大象已離開的證據) -> 跳回 anchor
 IMBALANCE_TOL        = 0.15     # 不動作容忍帶：介於老鼠(~0.13) 與大象(~0.21+) 的利用率隆起之間
-WEIGHT_BOUND         = 2        # 權重相對 anchor 的最大偏移 (慢 class 可 3->1 shed，快 class 6->8 吸收)
+WEIGHT_BOUND         = 2        # 權重相對 anchor 的最大偏移 (小整數 anchor 下避免過大修正與 rehash churn)
 CORRECTION_GAIN      = 0.5      # 比例修正增益：熱 class 依超出量降權、冷 class 升權
 UTIL_SAT             = 0.90     # 「該 class 逼近自身上限」的絕對門檻 (真實頻寬利用率)
 QDEPTH_HOT           = 32       # 視為被大象塞住的 max 佇列深度 (rate_limiter 設佇列上限 64 -> 半滿)
@@ -476,6 +477,18 @@ class MLController:
             pass
         return weights
 
+    def _local_current_weights(self):
+        """用控制器狀態產生 per-port 權重，避免每秒透過 Thrift 走訪 selector members。
+
+        _sync_from_dataplane() 啟動時已讀回一次 dataplane 狀態；之後所有成功套用都會更新
+        self._last_weights，因此熱路徑可直接信任本地狀態。
+        """
+        weights = {p: 1 for p in PORTS}
+        for rule, weight in zip(self._hw_rules, self._last_weights):
+            for port, _ in rule['ports_and_macs']:
+                weights[port] = weight
+        return weights
+
     def collect_1s_data(self):
         """採集 1 秒的數據點與硬體真實數據"""
         time.sleep(1.0)
@@ -492,7 +505,7 @@ class MLController:
         total_drops     = 0
 
         with open(os.devnull, 'w') as _dn, redirect_stdout(_dn), redirect_stderr(_dn):
-            weights = self.get_current_weights()
+            weights = self._local_current_weights()
             if weights != self.prev_weights_1s:
                 self.is_rehash_event  = 1
                 self.last_rehash_time = current_time

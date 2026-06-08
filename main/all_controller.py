@@ -23,6 +23,21 @@ except ImportError as e:
     logging.error(f"無法載入 P4-Utils 模組，請確認路徑正確: {e}")
     sys.exit(1)
 
+# ==========================================
+# 容量分群參數 (W-ECMP component 如何把 spine 分組)
+# ==========================================
+# 把容量「相近」的 spine 分到同一個 W-ECMP component，組內交給 dataplane DRILL 逐封包選最短佇列。
+# 理由：DRILL 均衡的是「佇列深度」而非「利用率」，唯有組內容量相近時「最短佇列 ≈ 最低利用率」才成
+# 立，且 DRILL 能用佇列反應自動補償小幅容量差。對等拓樸 (成對相同 bw) 會還原成原本的 4 組；當 8 個
+# spine 全不同 bw 時則退化為「排序後鄰接配對」，仍保住組內 DRILL —— 不像嚴格對稱 DRILL 會因為找不到
+# 完全相同容量而拆成 8 個單埠組 (失去微負載平衡、等同純 W-ECMP)。
+GROUP_MIN_SIZE = 2     # 每組至少幾個埠 (>=2 才有 DRILL 的第二選擇；單埠組 = 無微負載平衡)
+GROUP_MAX_SIZE = 2     # 每組最多幾個埠：=2 -> 容量相鄰配對 (預設)。調大可在容差內合併更多埠 (更多 DRILL 選擇，但組內容量差變大)
+GROUP_BW_TOL   = 1.5   # 組內容量 max/min 比容差 (僅 GROUP_MAX_SIZE>2 時生效，決定是否續長同一組)
+WEIGHT_BASE_MIN = 3    # 權重化為最小整數比時，最小組的目標權重。讓總成員數維持在數十以內，
+                       # 避免各組容量互質時 (例如 1.3:1.7:2.1:2.5) gcd 約不掉 -> 權重/成員數爆量、
+                       # 每次 rehash 要建很多 selector member 而拖慢控制迴圈。
+
 # 模組 1: 拓樸與硬體映射分析器
 class TopologyAnalyzer:
     def __init__(self, p4app_data: Dict[str, Any], topo_json_obj: Any):
@@ -81,64 +96,98 @@ class TopologyAnalyzer:
                 except nx.NetworkXNoPath:
                     logging.warning(f"無路徑可達: {src} -> {dst}")
 
+    def _cluster_by_capacity(self, ordered_nhops: List[str],
+                             nh_cap: Dict[str, float]) -> List[List[str]]:
+        """把『已依容量排序』的 next-hop 切成連續群組 (1-D 分群最佳解必為排序後的連續區間)。
+
+        規則：每組至少 GROUP_MIN_SIZE 埠 (保住組內 DRILL)；在 GROUP_MAX_SIZE 與 GROUP_BW_TOL
+        (組內 max/min 容量比) 約束下盡量讓組內容量相近。預設 GROUP_MAX_SIZE=2 -> 鄰接配對，
+        對等拓樸還原成原本的成對分組；尾端落單則併入前一組，避免出現失去 DRILL 的單埠組。
+        """
+        groups: List[List[str]] = []
+        cur: List[str] = []
+        for nh in ordered_nhops:
+            if not cur:
+                cur = [nh]
+                continue
+            caps  = [nh_cap[m] for m in cur] + [nh_cap[nh]]
+            ratio = max(caps) / min(caps) if min(caps) > 0 else float('inf')
+            if len(cur) < GROUP_MIN_SIZE:
+                cur.append(nh)                       # 還沒達最小組大小：必須收進來
+            elif len(cur) < GROUP_MAX_SIZE and ratio <= GROUP_BW_TOL:
+                cur.append(nh)                       # 容差內且未達上限：可續長同一組
+            else:
+                groups.append(cur)                   # 收尾，另起新組
+                cur = [nh]
+        if cur:
+            if len(cur) < GROUP_MIN_SIZE and groups:
+                groups[-1].extend(cur)               # 尾端落單 -> 併入前一組
+            else:
+                groups.append(cur)
+        return groups
+
     def get_ecmp_weights_and_rules(self, src_leaf: str, dst_leaf: str) -> Tuple[List[int], List[Dict[str, Any]]]:
-        """計算權重比例，並生成 P4 硬體規則"""
+        """計算 W-ECMP component 的權重與 P4 硬體規則 (容量分群版)。
+
+        不再以『完全相同的瓶頸簽章』分組 (那會在 8 個 bw 皆不同時拆成 8 個單埠組、失去 DRILL)，
+        改為：把每個 next-hop 依路徑瓶頸容量排序，呼叫 _cluster_by_capacity 做鄰接分群，組內容量
+        最相近者在一起；組權重 ∝ 組總容量。對等拓樸 (成對相同 bw) 的結果與舊版一致 ([3,4,5,6])。
+        """
         import networkx as nx
-        components_dict: Dict[tuple, Dict[str, Any]] = {} 
-        
         try:
             paths = list(nx.all_shortest_paths(self.G, source=src_leaf, target=dst_leaf))
         except nx.NetworkXNoPath:
             return [], []
 
+        # 每個 next-hop (spine) 的路徑瓶頸容量 (此 leaf-spine 拓樸即上行鏈路 bw)；
+        # 若多條最短路徑共用同一 next-hop，取較小的瓶頸以保守估計。
+        nh_cap: Dict[str, float] = {}
         for path in paths:
-            signature = []
-            path_bottleneck = float('inf')
-            for i in range(len(path) - 1):
-                u, v = path[i], path[i+1]
-                edge_labels = tuple(sorted(list(self.Q[u][v]['labels'])))
-                signature.append(edge_labels)
-                path_bottleneck = min(path_bottleneck, self.G[u][v]['bw'])
-                
-            sig_key = (tuple(signature), path_bottleneck)
-            if sig_key not in components_dict:
-                components_dict[sig_key] = {'weight': 0.0, 'next_hops': set()}
-            
-            components_dict[sig_key]['weight'] += path_bottleneck
-            if len(path) > 1:
-                components_dict[sig_key]['next_hops'].add(path[1])
+            if len(path) < 2:
+                continue
+            nh = path[1]
+            bott = min(self.G[path[i]][path[i+1]]['bw'] for i in range(len(path) - 1))
+            nh_cap[nh] = min(nh_cap.get(nh, float('inf')), bott)
+        if not nh_cap:
+            return [1], []
+
+        # 依 (容量, 實體 port) 排序確保決定性，再做容量鄰接分群
+        ordered = sorted(nh_cap,
+                         key=lambda nh: (nh_cap[nh],
+                                         self.topo_json.node_to_node_port_num(src_leaf, nh)))
+        groups = self._cluster_by_capacity(ordered, nh_cap)
 
         weights_float: List[float] = []
         hardware_rules: List[Dict[str, Any]] = []
-        
-        for comp_idx, (sig_key, data) in enumerate(components_dict.items()):
+        for comp_idx, members in enumerate(groups):
             comp_id = comp_idx + 1
-            weights_float.append(data['weight'])
-            
             ports_and_macs = []
-            for nh in data['next_hops']:
+            cap_sum = 0.0
+            for nh in members:
                 port = self.topo_json.node_to_node_port_num(src_leaf, nh)
-                mac = self.topo_json.node_to_node_mac(nh, src_leaf)
+                mac  = self.topo_json.node_to_node_mac(nh, src_leaf)
                 ports_and_macs.append((port, mac))
-            
+                cap_sum += nh_cap[nh]
             ports_and_macs.sort(key=lambda x: x[0])
-            num_nhops = len(ports_and_macs)
-            base_port = ports_and_macs[0][0] if num_nhops > 0 else 0
-            
+
+            weights_float.append(cap_sum)            # 組權重 ∝ 組總容量
             hardware_rules.append({
                 'comp_id': comp_id,
-                'num_nhops': num_nhops,
-                'base_port': base_port,
-                'ports_and_macs': ports_and_macs
+                'num_nhops': len(ports_and_macs),
+                'base_port': ports_and_macs[0][0] if ports_and_macs else 0,
+                'ports_and_macs': ports_and_macs,
             })
 
         if not weights_float:
             return [1], []
-            
-        weights_int = [max(1, int(w * 10)) for w in weights_float]
-        common_divisor = reduce(math.gcd, weights_int)
-        simplified_weights = [w // common_divisor for w in weights_int]
-        
+
+        # 化為「最小整數比」：以最小組容量為基準縮放後四捨五入。不用 ×10+gcd，因為當各組容量互質
+        # (例如 1.3:1.7:2.1:2.5) 時 gcd=1 約不掉，權重會變 [13,17,21,25] = 76 個 selector member，
+        # 讓每次 rehash 都要建一堆 member、拖慢控制迴圈。改用此法權重恆維持小整數 (此例 -> [3,4,5,6])。
+        base_cap = min(weights_float)
+        simplified_weights = [max(1, int(round(w / base_cap * WEIGHT_BASE_MIN)))
+                              for w in weights_float]
+
         return simplified_weights, hardware_rules
 # ==========================================
 # 模組 2: 交換機控制器 (加入批次優化 Command Buffer)
@@ -280,6 +329,55 @@ def install_ecmp_drill_rules(p4app_data, topo_json_obj, clear_first=True, verbos
             print(f"[{src_leaf}] 批次寫入硬體規則")
 
 
+def print_grouping_summary(p4app_data, topo_json_obj, src_leaf="l1", dst_leaf="l2",
+                           out_file=".grouping_summary.txt"):
+    """印出 (並存檔) 某 leaf pair 的 W-ECMP 容量分群結果 (唯讀，不寫任何硬體)。
+
+    重算 get_ecmp_weights_and_rules，列出每個 component 內含哪些 spine、各自頻寬與組權重。
+    同時把同一份內容寫入 out_file，讓 start_env.sh 即使在終端被 p4run 輸出洗版時，仍有一份
+    乾淨可隨時 cat 的結果 (容量相近者成組、組權重 ∝ 組總容量)。
+    """
+    analyzer = TopologyAnalyzer(p4app_data, topo_json_obj)
+
+    # port -> (spine 名稱, 連結頻寬)
+    port_info = {}
+    for nh in analyzer.G.neighbors(src_leaf):
+        if not str(nh).startswith('s'):
+            continue
+        try:
+            port = analyzer.topo_json.node_to_node_port_num(src_leaf, nh)
+            port_info[port] = (nh, analyzer.G[src_leaf][nh]['bw'])
+        except Exception:
+            pass
+
+    weights, rules = analyzer.get_ecmp_weights_and_rules(src_leaf, dst_leaf)
+
+    lines = ["=" * 60,
+             f" W-ECMP 容量分群結果 ({src_leaf} -> {dst_leaf})  —— 組內由 DRILL 逐封包選最短佇列",
+             "=" * 60]
+    if not rules:
+        lines.append("  (無可用路徑)")
+    else:
+        for w, rule in zip(weights, rules):
+            parts = []
+            for port, _ in rule['ports_and_macs']:
+                name, bw = port_info.get(port, (f"port{port}", 0.0))
+                parts.append(f"{name}({bw:g})")
+            mode = "DRILL" if rule['num_nhops'] > 1 else "單埠"
+            lines.append(f"  Component {rule['comp_id']} | {'  '.join(parts):28} | 權重 {w} | {mode}")
+        lines.append(f"  權重比例 = {':'.join(map(str, weights))}")
+    lines.append("=" * 60)
+
+    text = "\n".join(lines)
+    print("\n" + text + "\n", flush=True)
+    if out_file:
+        try:
+            with open(out_file, "w") as f:
+                f.write(text + "\n")
+        except Exception:
+            pass
+
+
 # ==========================================
 # 模組 4: 主控制迴圈 (批次執行版)
 # ==========================================
@@ -291,6 +389,11 @@ if __name__ == "__main__":
     with open('p4app.json', 'r') as f:
         p4app_data = json.load(f)
     topo_json_obj = load_topo('topology.json')
+
+    # --summary：唯讀印出分群結果，不安裝任何規則 (供 start_env.sh 最後顯示)
+    if "--summary" in sys.argv:
+        print_grouping_summary(p4app_data, topo_json_obj)
+        sys.exit(0)
 
     print("\n===========================================")
     print(" 啟動全網自適應 W-ECMP 控制器 (批次寫入優化版)")
