@@ -11,6 +11,7 @@ plot_result.py — 疊圖比較 ECMP / W-ECMP / W-ECMP+DRILL+ML 三種演算法
 
 用法：
     python3 plot_result.py
+    python3 plot_result.py --ML        # 只比較 W-ECMP+DRILL 靜態 vs W-ECMP+DRILL+ML 兩條
     python3 plot_result.py ECMP=path1.csv W-ECMP=path2.csv ML=path3.csv
 """
 
@@ -35,12 +36,23 @@ DEFAULT_RUNS = {
     "W-ECMP+DRILL+ML": (f"{VAL_DIR}/comparison_ml.csv",    "#2ca02c"),
 }
 
+# --ML 模式：只比較固定容量比例權重 (靜態) vs ML 動態調權，兩者皆 W-ECMP+DRILL，唯一差別是
+# 權重會不會被 ML 改動 -> 直接看出 ML 控制本身的增益。
+ML_RUNS = {
+    "W-ECMP+DRILL":    (f"{VAL_DIR}/comparison_wecmp_drill.csv", "#ff7f0e"),
+    "W-ECMP+DRILL+ML": (f"{VAL_DIR}/comparison_ml.csv",          "#2ca02c"),
+}
+
 
 def parse_args():
     """支援 label=path 覆寫與 warmup=N；回傳 (runs, warmup_sec)。"""
     warmup = DEFAULT_WARMUP_SEC
+    ml_only = False
     label_args = []
     for arg in sys.argv[1:]:
+        if arg.lower() in ("--ml", "-ml"):
+            ml_only = True
+            continue
         if "=" not in arg:
             continue
         k, v = arg.split("=", 1)
@@ -49,6 +61,10 @@ def parse_args():
             except ValueError: pass
         else:
             label_args.append((k, v))
+
+    # --ML：只比較 W-ECMP+DRILL 靜態 vs ML 兩條 (忽略其餘 label= 覆寫)
+    if ml_only:
+        return ML_RUNS, warmup
 
     if not label_args:
         return DEFAULT_RUNS, warmup

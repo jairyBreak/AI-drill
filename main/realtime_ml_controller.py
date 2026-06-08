@@ -40,6 +40,14 @@ PORTS = list(range(2, 10))
 CAPACITY = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64,
             6: 0.80, 7: 0.80, 8: 0.96, 9: 0.96}
 
+# ---- 權重控制總開關 ----
+# True  -> 完整 W-ECMP+DRILL+ML：啟動裝 anchor，之後 control_step 依 (反應式/ML) 證據動態調權。
+# False -> 純靜態 W-ECMP+DRILL：啟動時依各 class 頻寬容量裝好 anchor 權重 [3,4,5,6]，之後
+#          「權重永不變動」，完全不參考 ML 預測或任何指標；class 內仍由 dataplane DRILL 逐封包
+#          選最短佇列。等同 W-ECMP+DRILL baseline，但仍走本控制器的量測/記錄路徑 (相同 CSV
+#          欄位，供 plot_result.py 公平比較)。
+ML_WEIGHT_ENABLE = False
+
 # ---- 控制器穩定性參數 (大象/老鼠流量；錨定容量比例 + 有界修正) ----
 # 設計：流量是大象 (0.24~0.40M) + 老鼠 (0.06~0.16M) 混合，事先不知誰是大象。
 # 大象落到某個容量 class 會把該 class 的佇列/利用率撐高 (自我暴露)，控制器就「降低該
@@ -63,7 +71,9 @@ WEIGHT_MIN           = 1
 WEIGHT_MAX           = 8
 
 # 結果 CSV (與 baseline / plot_1s_metrics 相同欄位，供 plot_result.py 三方比較)
-OUTPUT_CSV = "research_results/data/validation/comparison_ml.csv"
+# 動態調權 vs 靜態 (固定容量比例權重) 寫不同檔名，避免互相覆蓋
+OUTPUT_CSV = ("research_results/data/validation/comparison_ml.csv" if ML_WEIGHT_ENABLE
+              else "research_results/data/validation/comparison_wecmp_drill.csv")
 
 MODELS = {
     "latency": "rf_model_latency_1s.pkl",
@@ -549,7 +559,9 @@ class MLController:
     def run(self, duration=None):
         print("\n" + "="*125)
         dur_txt = f"{duration}s" if duration else "持續 (Ctrl-C 停止)"
-        print(f" [ML 智能監控 v4.3] 啟動 - 1s 拓樸無關採集模式 | 時長: {dur_txt}")
+        mode_txt = ("W-ECMP+DRILL+ML (動態調權)" if ML_WEIGHT_ENABLE
+                    else "W-ECMP+DRILL 靜態 (固定容量比例權重，永不變動)")
+        print(f" [ML 智能監控 v4.3] 啟動 - 1s 拓樸無關採集模式 | 模式: {mode_txt} | 時長: {dur_txt}")
         print("="*125 + "\n")
 
         results = []
@@ -609,7 +621,9 @@ class MLController:
                       f"Loss: {self.smoothed_loss:4.1f}/{hw_loss:4.1f}% | "
                       f"Util: {feats['Total_Util_Sum']:4.2f}",
                       end='', flush=True)
-                self.control_step(feats, preds)
+                # 靜態模式：權重永不變動 (啟動時已裝好容量比例 anchor)，不參考任何指標
+                if ML_WEIGHT_ENABLE:
+                    self.control_step(feats, preds)
         except KeyboardInterrupt: print("\n停止。")
         finally:
             if results:
