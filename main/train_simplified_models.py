@@ -61,8 +61,8 @@ def train_evolved_baseline():
     df = pd.read_csv(CSV_PATH)
 
     original_len = len(df)
-    df = df[df["Label_Latency_ms"] <= 3000.0]
-    print(f"剔除了 {original_len - len(df)} 筆極端延遲雜訊 (Mininet Artifacts)")
+    df = df[df["Label_Latency_ms"] >= 0]
+    print(f"剔除了 {original_len - len(df)} 筆無效樣本 (保留極端高延遲)")
 
     df = add_evolved_features(df)
     

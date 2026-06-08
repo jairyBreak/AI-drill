@@ -154,11 +154,11 @@ def train_models():
     df = pd.concat(all_dfs, ignore_index=True)
     print(f"合併完成！總樣本數: {len(df)}")
     
-    # 數據清洗：剔除異常標籤與雜訊
+    # 數據清洗：保留極端大象流延遲，只剔除小於 0 的無效值
     original_len = len(df)
-    df = df[df["Label_Max_Path_Delay_ms"] <= 3000.0]
+    # df = df[df["Label_Max_Path_Delay_ms"] <= 3000.0]  # 放寬限制，讓模型學習極端塞車
     df = df[df["Label_Max_Path_Delay_ms"] >= 0]
-    print(f"數據清洗: 剔除了 {original_len - len(df)} 筆極端延遲雜訊/無效樣本")
+    print(f"數據清洗: 剔除了 {original_len - len(df)} 筆無效樣本 (保留了所有極端高延遲)")
     
     # 確保特徵都在
     available_features = [f for f in SELECTED_FEATURES if f in df.columns]

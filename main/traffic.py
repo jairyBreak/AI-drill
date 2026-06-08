@@ -45,6 +45,7 @@ L1_THRIFT   = 9090  # queue depth lives here (egress congestion point)
 L2_THRIFT   = 9091  # byte counters live here (ML controller reads same source)
 
 _monitor_header = ""  # set by run_dynamic; included in the in-place monitor block
+DISABLE_MONITOR = False
 
 
 def _make_thrift(port):
@@ -121,7 +122,8 @@ def _monitor_loop(stop_event):
 
 def _start_monitor():
     ev = threading.Event()
-    threading.Thread(target=_monitor_loop, args=(ev,), daemon=True).start()
+    if not DISABLE_MONITOR:
+        threading.Thread(target=_monitor_loop, args=(ev,), daemon=True).start()
     return ev
 
 
@@ -522,7 +524,13 @@ def main():
                         help="duration in seconds; omitted means run until Ctrl+C")
     parser.add_argument("--plot", action="store_true",
                         help="Capture and plot per-flow throughput at exit")
+    parser.add_argument("--no-monitor", action="store_true",
+                        help="Disable Thrift monitor (useful when called by other scripts)")
     args = parser.parse_args()
+
+    if args.no_monitor:
+        global DISABLE_MONITOR
+        DISABLE_MONITOR = True
 
     if args.static:
         run_static(args.plot, args.duration)

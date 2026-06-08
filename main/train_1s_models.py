@@ -128,9 +128,9 @@ def train_1s_models():
 
     # 數據清洗：剔除異常標籤
     original_len = len(df)
-    df = df[df["Label_Max_Path_Delay_ms"] <= 3000.0]
+    # df = df[df["Label_Max_Path_Delay_ms"] <= 3000.0]
     df = df[df["Label_Max_Path_Delay_ms"] >= 0]
-    print(f"剔除了 {original_len - len(df)} 筆極端延遲雜訊")
+    print(f"剔除了 {original_len - len(df)} 筆無效樣本 (保留極端高延遲)")
 
     # 添加衍生特徵
     df = add_1s_features(df)
