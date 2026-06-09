@@ -17,7 +17,7 @@ CSV_4PORT = "bruh/rolling_training_dataset_1.csv"
 CSV_8PORT = "research_results/data/datasets/rolling_training_dataset.csv"
 
 CAPACITY_4PORT = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
-CAPACITY_8PORT = {2: 0.48, 3: 0.48, 4: 0.64, 5: 0.64, 6: 0.8, 7: 0.8, 8: 0.96, 9: 0.96}
+CAPACITY_8PORT = {2: 0.48, 3: 0.56, 4: 0.64, 5: 0.72, 6: 0.80, 7: 0.88, 8: 0.96, 9: 1.04}
 
 BEST_PARAMS = dict(
     n_estimators=100,       # 減少樹的數量以提升即時推論速度 (1s 尺度需要更快的推論)

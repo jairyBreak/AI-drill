@@ -526,11 +526,21 @@ def main():
                         help="Capture and plot per-flow throughput at exit")
     parser.add_argument("--no-monitor", action="store_true",
                         help="Disable Thrift monitor (useful when called by other scripts)")
+    parser.add_argument("--scale", type=float, default=1.0,
+                        help="Scale factor for all flow bandwidths (default: 1.0)")
     args = parser.parse_args()
 
     if args.no_monitor:
         global DISABLE_MONITOR
         DISABLE_MONITOR = True
+
+    if args.scale != 1.0:
+        def scale_list(bw_list):
+            return [f"{float(bw.replace('M', '')) * args.scale:.3f}M" for bw in bw_list]
+        global FLOW_BWS, MICE_BWS, ELEPHANT_BWS
+        FLOW_BWS = scale_list(FLOW_BWS)
+        MICE_BWS = scale_list(MICE_BWS)
+        ELEPHANT_BWS = scale_list(ELEPHANT_BWS)
 
     if args.static:
         run_static(args.plot, args.duration)

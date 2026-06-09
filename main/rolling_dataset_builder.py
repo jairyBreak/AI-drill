@@ -281,9 +281,17 @@ class RollingDataBrain:
         else:
             mode = "--elmice"
         
-        # traffic.py總負載固定約3.12M，共18條流
-        avg_load = 3.12 / 18
-        return weights, mode, f"{avg_load:.3f}M", 18
+        # 依照使用者要求，加入全局流量縮放比例，並有 70% 機率維持在 3.12M 附近
+        r = random.random()
+        if r < 0.70:
+            scale = random.uniform(0.9, 1.1)  # 70% 常態負載 (約 3.12M)
+        elif r < 0.85:
+            scale = random.uniform(0.4, 0.8)  # 15% 輕負載
+        else:
+            scale = random.uniform(1.2, 1.6)  # 15% 重負載
+
+        avg_load = (3.12 * scale) / 18
+        return weights, mode, f"{avg_load:.3f}M", 18, scale
 
     def run_experiment(self, exp_id):
         print(f"\n=== 開始長連線實驗 #{exp_id} ===")
@@ -291,7 +299,7 @@ class RollingDataBrain:
         self.traffic_start_time = time.time()
         self.last_rehash_time = time.time()
         
-        weights, mode, load_str, flows = self.get_diverse_params(exp_id)
+        weights, mode, load_str, flows, scale = self.get_diverse_params(exp_id)
         self.apply_weights(weights)
         self.reset_switch_stats()
         
@@ -299,7 +307,7 @@ class RollingDataBrain:
         self.current_flows = flows
         
         duration_sec = 120
-        traffic_cmd = ["sudo", "python3", "traffic.py", mode, "--no-monitor", str(duration_sec)]
+        traffic_cmd = ["sudo", "python3", "traffic.py", mode, "--no-monitor", "--scale", f"{scale:.2f}", str(duration_sec)]
         p_traffic = subprocess.Popen(traffic_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         print(f"  [流量] traffic.py {mode} | INT 遙測中")
