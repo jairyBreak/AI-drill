@@ -200,8 +200,10 @@ def main():
 
     # 摘要統計表 — 延遲以每秒峰值的 p50/p95/max 表示 (尾延遲才是 load balancer 的重點，
     # 不用平均，避免把峰值平均掉)；Loss = 端到端累積丟包率；Util σ = 跨 spine 利用率標準差 (越小越平衡)
+    long_run = max((float(x[-1]) if len(x) else 0.0) for _, _, x in loaded.values()) > 90.0
+    tail_label = "Lat p99" if long_run else "Lat max"
     print(f"\n=== 指標摘要 (丟棄前 {warmup:.0f}s 暖機；延遲為每秒峰值的分位數) ===")
-    print(f"{'演算法':^18} | {'Lat p50':^8} | {'Lat p95':^8} | {'Lat max':^8} | "
+    print(f"{'演算法':^18} | {'Lat p50':^8} | {'Lat p95':^8} | {tail_label:^8} | "
           f"{'Loss(%)E2E':^11} | {'Mbps':^7} | {'Util σ':^7}")
     print("-" * 88)
     for label, (df, _, _) in loaded.items():
@@ -209,7 +211,8 @@ def main():
                            key=lambda c: int(c[len('util_s'):]))
         sigma = float(np.std([df[c].mean() for c in util_cols])) if util_cols else float('nan')
         lat = df['Real_Lat']
-        print(f"{label:^18} | {lat.median():8.2f} | {lat.quantile(0.95):8.2f} | {lat.max():8.2f} | "
+        tail_value = lat.quantile(0.99) if long_run else lat.max()
+        print(f"{label:^18} | {lat.median():8.2f} | {lat.quantile(0.95):8.2f} | {tail_value:8.2f} | "
               f"{end_to_end_loss(df):9.2f} | {df['Total_Mbps'].mean():6.2f} | {sigma:6.3f}")
 
 
