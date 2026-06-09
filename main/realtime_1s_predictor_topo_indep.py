@@ -143,9 +143,12 @@ class Realtime1sPredictorTopoIndep:
             pass
         return weights
 
-    def collect_1s_data(self):
-        """採集 1 秒的數據點與硬體真實數據"""
-        time.sleep(1.0)
+    def collect_1s_data(self, sleep_before=True):
+        """採集 1 秒的數據點與硬體真實數據。
+
+        sleep_before=False -> 不自己睡，由外層 deadline 步調控制 (各演算法窗長一致才公平)。"""
+        if sleep_before:
+            time.sleep(1.0)
         now_t = time.time()
         # dt = 與上次取樣的真實間隔 (含處理時間)；不可只用 sleep(1.0)，否則處理較慢時吞吐量會被高估
         dt = now_t - self._prev_sample_t
@@ -172,14 +175,19 @@ class Realtime1sPredictorTopoIndep:
         total_delta_enq = 0
         total_drops = 0
         
+        # 整批讀取：單次 RPC 讀回整個暫存器陣列，取代每埠各一次 register_read。
+        # 把對 BMv2 control plane 的 RPC 從每秒 ~32 次降到 4 次，減少與轉發執行緒的 CPU/鎖競爭。
+        q_arr   = self.api_telemetry.register_read('path_max_queue_depth_reg')
+        acc_arr = self.api_telemetry.register_read('path_acc_q_delay_reg')
+        # 讀完即整批歸零；量測窗 = 兩次 reset 的間隔。本實驗僅 src_id=1 在用，reset 整列無副作用。
+        self.api_telemetry.register_reset('path_max_queue_depth_reg')
+        self.api_telemetry.register_reset('path_acc_q_delay_reg')
+
         for p in PORTS:
             reg_idx = SRC_ID * 16 + p
-            q = self.api_telemetry.register_read('path_max_queue_depth_reg', reg_idx)
-            raw_acc_q_delay = self.api_telemetry.register_read('path_acc_q_delay_reg', reg_idx)
-            
-            self.api_telemetry.register_write('path_max_queue_depth_reg', reg_idx, 0)
-            self.api_telemetry.register_write('path_acc_q_delay_reg', reg_idx, 0)
-            
+            q = q_arr[reg_idx]
+            raw_acc_q_delay = acc_arr[reg_idx]
+
             cnt = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
             db = cnt - self.prev_bytes[p]
             mbps = ((max(0, db) * 8) / (dt * 1_000_000))

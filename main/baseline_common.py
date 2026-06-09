@@ -205,10 +205,22 @@ def run_measurement(label, duration, csv_path):
     print(f"{'時間':^10} | {'Lat(ms)':^9} | {'Loss(%)':^9} | {'Util':^6} | {'Mbps':^6}")
     print("-" * 55)
 
+    # 與 realtime_ml_controller 相同的 deadline 步調：每 PERIOD 秒對齊一次取樣，量測窗固定 = PERIOD，
+    # 與 ML 的窗長一致 -> 延遲 (每秒峰值高水位) 才能公平比較。處理超時則「跳到下一個未來截止點」
+    # (不壓縮、不連續讀)，避免在交換機忙碌時連發 RPC 造成額外干擾。
+    PERIOD    = 1.0
+    next_tick = start + PERIOD
     try:
-        while time.time() - start < duration:
+        while next_tick - start <= duration:
+            now = time.time()
+            if now < next_tick:
+                time.sleep(next_tick - now)
+            else:
+                next_tick += (int((now - next_tick) // PERIOD) + 1) * PERIOD
+                time.sleep(max(0.0, next_tick - time.time()))
+
             with redirect_stdout(_dn), redirect_stderr(_dn):
-                row = predictor.collect_1s_data()
+                row = predictor.collect_1s_data(sleep_before=False)
             per_switch_util = {f'util_s{p-1}': row[f'src1_port{p}_mbps'] / CAPACITY[p]
                                for p in PORTS}
             total_mbps = sum(row[f'src1_port{p}_mbps'] for p in PORTS)
@@ -233,6 +245,8 @@ def run_measurement(label, duration, csv_path):
                   f"{row['Real_HW_Loss_Percent']:7.1f} | "
                   f"{util_sum:5.2f} | {total_mbps:5.2f}",
                   end='', flush=True)
+
+            next_tick += PERIOD
     except KeyboardInterrupt:
         print("\n[已中止]")
     finally:
