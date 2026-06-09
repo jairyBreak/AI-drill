@@ -48,20 +48,95 @@ AI-drill/
 - **8 leaf switches**: l1–l8 (Thrift ports 9090–9097)
 - **8 spine switches**: s1–s8 (Thrift ports 9098–9105)
 
-**Asymmetric uplinks** (the key design choice — creates 4 distinct W-ECMP components):
+**Asymmetric uplinks** (the key design choice — every spine has a *distinct* bandwidth, so the load balancer cannot treat the fabric as symmetric):
 
 | Port at lN | Spine | Link BW | Effective cap (rate_limiter ×0.8) |
 |---|---|---|---|
 | 2 | s1 | 0.6 Mbps | **0.48 Mbps** |
-| 3 | s2 | 0.6 Mbps | **0.48 Mbps** |
+| 3 | s2 | 0.7 Mbps | **0.56 Mbps** |
 | 4 | s3 | 0.8 Mbps | **0.64 Mbps** |
-| 5 | s4 | 0.8 Mbps | **0.64 Mbps** |
+| 5 | s4 | 0.9 Mbps | **0.72 Mbps** |
 | 6 | s5 | 1.0 Mbps | **0.80 Mbps** |
-| 7 | s6 | 1.0 Mbps | **0.80 Mbps** |
+| 7 | s6 | 1.1 Mbps | **0.88 Mbps** |
 | 8 | s7 | 1.2 Mbps | **0.96 Mbps** |
-| 9 | s8 | 1.2 Mbps | **0.96 Mbps** |
+| 9 | s8 | 1.3 Mbps | **1.04 Mbps** |
 
-Same-BW spine pairs form the 4 ECMP components: s1/s2 (0.48M), s3/s4 (0.64M), s5/s6 (0.80M), s7/s8 (0.96M). l3–l8 are symmetric to all spines.
+All 8 uplinks differ (0.6 → 1.3 Mbps in 0.1 steps). The control plane's capacity-clustering groups adjacent-capacity spines into **4 DRILL pairs** — `(s1,s2)`, `(s3,s4)`, `(s5,s6)`, `(s7,s8)` — and weights them by aggregate capacity → `[3,4,5,6]`. l3–l8 connect identically to all spines.
+
+> **Why distinct BWs matter.** Canonical DRILL only works inside a *symmetric* (equal-capacity) group. With 8 truly distinct capacities, a strict-symmetry DRILL would shatter into 8 single-port groups — i.e. degenerate to plain W-ECMP with no in-network micro-balancing. This topology is the stress case that motivates the capacity-clustering rule below.
+
+---
+
+## DRILL, Grouping, and Where Each Breaks
+
+### What DRILL actually is
+
+DRILL (Distributed Randomized In-network Load balancing, NSDI'17) is a **per-packet, dataplane-only** scheme: for every packet it samples two random ports out of a group plus the previous best port, reads their live queue depths, and forwards to the shallowest queue. No control plane, no per-flow state — it reacts at line rate to micro-bursts that any 1-second controller is far too slow to catch.
+
+The catch: **DRILL equalizes queue depth, not utilization.** Steering toward the shortest queue only balances *load* when every port in the group drains at the same rate. So DRILL is only correct **inside a symmetric (equal-capacity) group**. Canonical DRILL on an asymmetric fabric therefore (1) decomposes the topology into symmetric groups, (2) weights *across* groups by capacity (W-ECMP), and (3) micro-balances *within* each group. Putting unequal-capacity ports in one DRILL group is the classic failure mode: the shortest queue is frequently the slow link, so DRILL keeps feeding the bottleneck.
+
+### Our grouping rule (`all_controller.py: _cluster_by_capacity`)
+
+Strict symmetry is too brittle here — with 8 distinct BWs it yields 8 singletons (pure W-ECMP, no DRILL). Instead we cluster ports of *similar* capacity so each group still has ≥2 members (a real second choice for DRILL) while keeping intra-group capacity spread small. It is a 1-D contiguous clustering (the optimal 1-D partition is always contiguous after sorting):
+
+1. Map each next-hop spine to its path-bottleneck capacity; sort by `(capacity, port)`.
+2. Walk the sorted list, growing the current group while it is below `GROUP_MIN_SIZE`, or below `GROUP_MAX_SIZE` **and** within `GROUP_BW_TOL` (intra-group max/min capacity ratio). Otherwise start a new group.
+3. A trailing singleton merges back into the previous group (never emit a 1-port "group" — that has no DRILL second choice).
+4. Group weight ∝ aggregate group capacity, then normalized to a **small integer ratio** (`WEIGHT_BASE_MIN`).
+
+**Tuning constants** (top of `all_controller.py`):
+
+| Const | Default | Role |
+|---|---|---|
+| `GROUP_MIN_SIZE` | 2 | min ports/group — `≥2` guarantees a DRILL second choice; 1 = no micro-balancing |
+| `GROUP_MAX_SIZE` | 2 | max ports/group — `2` ⇒ adjacent-capacity **pairs** (default). Raise to merge more ports within tolerance (more DRILL choices, but wider intra-group capacity spread) |
+| `GROUP_BW_TOL` | 1.5 | intra-group capacity max/min ratio tolerance (only active when `GROUP_MAX_SIZE > 2`) |
+| `WEIGHT_BASE_MIN` | 3 | target weight of the smallest group when reducing to a smallest-integer ratio |
+
+On the 0.6→1.3 topology this gives the pairs `(s1,s2) (s3,s4) (s5,s6) (s7,s8)` with capacity sums `1.3,1.7,2.1,2.5` → weights **`[3,4,5,6]`**. On the older symmetric-pair topology it reproduces the exact same `[3,4,5,6]`, so the change is backward-compatible.
+
+**Why the small-integer normalization matters (a real bug we hit).** The earlier reduction (`×10` then `gcd`) breaks when the capacity sums are coprime: `1.3:1.7:2.1:2.5 → [13,17,21,25]` (gcd 1) = **76 selector members** vs 18. In BMv2 each member is a Thrift RPC at rehash time, so every weight change fired 76 RPCs, stalled the 1-second control loop, and churned flows — visibly worse p50/tail latency. Normalizing to the smallest-integer ratio (`base = min capacity`, scale so the smallest group = `WEIGHT_BASE_MIN`) keeps the member count in the teens regardless of coprimality.
+
+### Where grouping works vs. falls apart
+
+| Regime | Grouping outcome | DRILL effectiveness |
+|---|---|---|
+| Symmetric pairs (old topo) | 4 clean equal-capacity pairs | Ideal — intra-group ports drain equally |
+| Distinct BWs, small steps (this topo) | 4 adjacent pairs, ratio ≤ ~1.17 | Good — near-symmetric inside each pair |
+| Distinct BWs, large steps | pairs with high intra-group ratio | Degrades — DRILL biases toward the faster port inside the pair |
+| All-distinct, strict symmetry | 8 singletons | None — collapses to plain W-ECMP |
+
+The aggregate-capacity weighting (W-ECMP across groups) is what keeps the *across-group* split correct even when intra-group symmetry is only approximate; DRILL handles the *within-group* micro-bursts. The two layers cover for each other.
+
+---
+
+## The ML Layer: What It's Trying to Solve
+
+W-ECMP + DRILL alone is **capacity-correct but elephant-blind**. W-ECMP splits *flows* by a static hash, so a single elephant flow that hashes onto a group sits there for its lifetime; DRILL can shuffle that elephant's *packets* between the group's two ports but cannot move the elephant *off* an over-subscribed group. On asymmetric capacity this shows up as one group running hot (deep queues, tail latency) while others idle — exactly the imbalance DRILL's queue-equalization cannot see, because within its hot group the queues *are* balanced.
+
+The ML controller closes that gap at the 1-second timescale:
+
+- **It targets elephant/mice traffic without flow classification.** It never tries to identify which flow is an elephant. An elephant simply *reveals itself* as sustained utilization/queue pressure on whichever capacity group it hashed into; the controller responds by **shedding that group's W-ECMP weight**, so fewer new (mostly mouse) flows hash into it and the elephant's group cools. DRILL keeps steering packets to the non-elephant port inside the group meanwhile.
+- **RF predictions push the balance further/earlier.** Random-Forest models predict next-second latency/loss from topology-independent telemetry, letting the controller act on a *predicted* hot group before queues actually overflow — additional balancing headroom on top of the reactive hardware-evidence triggers. (The hardware-evidence path — real loss / queue depth / utilization — works even with the models absent; predictions are a secondary, earlier-acting signal.)
+
+Net effect (see Evaluation): it gives up a few ms of median latency versus raw DRILL but wins the **tail** (p95/max) and roughly halves utilization spread (σ), because it is the only layer that can relocate an elephant's *flow mass* across asymmetric groups.
+
+---
+
+## Cutting Control-Loop Overhead
+
+Every weight change in BMv2 is expensive and disruptive: `action_selector` is **not** consistent-hashing, so changing *any* weight rebuilds the selector group and rehashes **all** flows through it. The cost is magnitude-independent. The controller is therefore engineered to change weights **rarely, cheaply, and without halting forwarding**:
+
+- **Don't re-read weights from the dataplane every tick.** `_sync_from_dataplane()` walks the selector group/member handles exactly **once** at startup; thereafter the hot path trusts local state (`_last_weights`) via `_local_current_weights()`. The old code walked every selector member over Thrift each second just to detect rehash events — pure overhead removed.
+- **Hitless atomic repoint (`apply_weights`).** Never mutate the in-use group (that can crash BMv2 and drops packets). Instead: build a *fresh* group with the new member counts, then `bm_mt_indirect_ws_modify_entry` to **atomically** repoint the `w_ecmp_table` entry to it (no forwarding gap), then free the old group — which is now unreferenced and safe to delete. Falls back to delete-then-add only if the atomic modify RPC fails.
+- **Small integer weights** keep each rebuild to ~18 member RPCs (see the coprime bug above), not 76.
+- **Change rarely, not by small steps.** Since rehash cost is the same whether the weight moves by 1 or 8, reactivity is governed by *gates*, not by damping:
+  - `COOLDOWN_SEC` (6) — minimum spacing between rehashes.
+  - `SETTLE_SEC` (2) — post-rehash measurement blackout; the transient redistribution is not trusted for decisions.
+  - `PERSIST_TICKS` (2) / `RELAX_TICKS` (6) — an imbalance (or a now-cold shed group) must hold this many ticks before acting, filtering noise and transients.
+  - `WEIGHT_BOUND` (±2) bounds each correction around the capacity anchor, so the controller stays *near* the proven `[3,4,5,6]` split and relaxes back to it by construction as imbalance → 0.
+- **No-op suppression.** If the computed weights equal the current ones (already at the bound, or aggregate overload that weights can't fix), it logs the reason and skips the rehash entirely instead of churning. On static traffic the elephant keeps its group warm so `RELAX` never fires → the controller **freezes** and stops rehashing altogether.
+- **Batched install (`all_controller.py`).** The startup rule installer buffers all `simple_switch_CLI` commands and fires **one subprocess per switch** (not one per command), then writes `port_map_reg` directly over Thrift.
 
 ---
 
@@ -119,7 +194,7 @@ Packets from port 1 (host-facing) get a custom header (`etherType=0x9999`) carry
 
 ### `all_controller.py` — W-ECMP Rule Installer
 
-**`TopologyAnalyzer`** reads `p4app.json` + `topology.json`, builds a NetworkX graph, annotates each edge with capacity-factor labels, then groups all shortest paths between each leaf pair into **components** by their bottleneck-BW signature. For l1→l2 this yields 4 components (s1/s2, s3/s4, s5/s6, s7/s8).
+**`TopologyAnalyzer`** reads `p4app.json` + `topology.json`, builds a NetworkX graph, then groups the shortest-path next-hops between a leaf pair into **components** via **capacity clustering** (`_cluster_by_capacity` — see "DRILL, Grouping, and Where Each Breaks" above), not by exact bottleneck signature. This handles the all-distinct-BW topology (8 distinct caps → 4 adjacent pairs, not 8 singletons). Each component's weight ∝ its aggregate capacity, reduced to a smallest-integer ratio (`[3,4,5,6]` for l1→l2). Run `python3 all_controller.py --summary` (or read `.grouping_summary.txt`, also printed at the end of `start_env.sh`) to see the live grouping.
 
 **`LeafController`** buffers all `simple_switch_CLI` commands and fires one subprocess per switch (not one per command), then writes `port_map_reg` entries directly via Thrift RPC.
 
@@ -221,7 +296,7 @@ Converts raw per-port measurements into a **fixed 39-feature vector** regardless
 
 Run: `python3 train_1s_models.py`
 
-**⚠ Known bug**: `CAPACITY` dict in `train_1s_models.py` uses `{2:0.8, 3:0.8, 4:0.8, 5:0.8, 6:1.2, ...}` instead of actual rate-limited values `{2:0.48, 3:0.48, 4:0.64, 5:0.64, 6:0.80, 7:0.80, 8:0.96, 9:0.96}`. Fix before training.
+**⚠ Known bug**: `CAPACITY` dict in `train_1s_models.py` uses stale values instead of the actual rate-limited capacities `{2:0.48, 3:0.56, 4:0.64, 5:0.72, 6:0.80, 7:0.88, 8:0.96, 9:1.04}` (link bw × 0.8 for the current 0.6→1.3 topology). Fix before training. (`realtime_1s_predictor_topo_indep.py` already carries the correct dict.)
 
 ---
 
@@ -328,11 +403,14 @@ All four are the same pipeline with a different W-ECMP/DRILL component layout (`
 | Algorithm | Components | Weights | DRILL |
 |---|---|---|---|
 | ECMP | 8 single-port | all equal | off (`num_nhops=1`) |
-| W-ECMP | 8 single-port | ∝ bandwidth (3/3/4/4/5/5/6/6) | off |
-| DRILL | 1 component, all 8 ports | trivial | on across all 8 (`num_nhops=8`) |
-| W-ECMP+DRILL+ML | 4 capacity-pair components | ML-controlled `[3,4,5,6]±` | on within each pair (`num_nhops=2`) |
+| W-ECMP | 8 single-port | ∝ bandwidth | off |
+| DRILL | 1 component, all 8 ports | trivial | on across all 8 (`num_nhops=8`) — capacity-blind (the incorrect strawman DRILL) |
+| W-ECMP+DRILL (static) | 4 capacity-pair components | fixed capacity anchor `[3,4,5,6]` | on within each pair (`num_nhops=2`) — **correct DRILL** |
+| W-ECMP+DRILL+ML | 4 capacity-pair components | ML-controlled `[3,4,5,6] ± WEIGHT_BOUND` | on within each pair (`num_nhops=2`) |
 
-**Elephant/mice (`--elmice`), 60s, 5s warmup dropped:**
+The "DRILL" baseline (`baseline_drill.py`, one capacity-blind 8-port group) is the **incorrect** DRILL — it ignores symmetry and lets the shortest-queue pick favour slow links. The **correct** DRILL is the static `W-ECMP+DRILL` config (`realtime_ml_controller.py` with `ML_WEIGHT_ENABLE=False`): symmetric capacity pairs + capacity weights + within-pair micro-balancing, weights frozen at the `[3,4,5,6]` anchor. The head-to-head the project argues is **correct DRILL (static) vs. +ML**. Setting `ML_WEIGHT_ENABLE=False` writes `comparison_wecmp_drill.csv`; `True` writes `comparison_ml.csv`; `plot_result.py --ML` overlays just those two.
+
+**Elephant/mice (`--elmice`), 60s, 5s warmup dropped** *(measured on the earlier symmetric-pair topology — 0.6/0.8/1.0/1.2 in pairs; re-run pending for the current 0.6→1.3 all-distinct config, but the grouping reduces to the same `[3,4,5,6]` so behaviour is expected to carry over):*
 
 | Algorithm | Lat p50 | Lat p95 | Lat max | Loss E2E | Mbps | Util σ |
 |---|--:|--:|--:|--:|--:|--:|
