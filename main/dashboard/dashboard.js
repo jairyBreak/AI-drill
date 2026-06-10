@@ -229,17 +229,27 @@ function drawTopology() {
       c.setAttribute("r", 23);
       g.appendChild(c);
     } else {
-      const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      r.setAttribute("x", p.x - 32);
-      r.setAttribute("y", p.y - 22);
-      r.setAttribute("width", 64);
-      r.setAttribute("height", 44);
-      r.setAttribute("rx", 6);
-      g.appendChild(r);
+      const frame = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      frame.setAttribute("class", "switch-frame");
+      frame.setAttribute("x", p.x - 45);
+      frame.setAttribute("y", p.y - 29);
+      frame.setAttribute("width", 90);
+      frame.setAttribute("height", 58);
+      frame.setAttribute("rx", 7);
+      g.appendChild(frame);
+
+      const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+      img.setAttribute("href", "/switch.svg");
+      img.setAttribute("x", p.x - 39);
+      img.setAttribute("y", p.y - 19);
+      img.setAttribute("width", 78);
+      img.setAttribute("height", 38);
+      img.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      g.appendChild(img);
     }
     const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
     t.setAttribute("x", p.x);
-    t.setAttribute("y", p.y);
+    t.setAttribute("y", kind === "host" ? p.y : p.y + 43);
     t.textContent = node.id;
     g.appendChild(t);
     nodesG.appendChild(g);

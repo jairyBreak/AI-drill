@@ -186,16 +186,28 @@ th {
   pointer-events: none;
 }
 
-.node rect, .node circle {
+.node .switch-frame, .node circle {
   stroke: #dce7e3;
   stroke-width: 1.4;
   cursor: pointer;
 }
 
 .node.host circle { fill: #293238; }
-.node.leaf rect { fill: #244f76; }
-.node.spine rect { fill: #286552; }
-.node.selected rect, .node.selected circle { stroke: #fff; stroke-width: 3; }
+.node .switch-frame {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(220, 231, 227, 0.35);
+}
+.node image {
+  cursor: pointer;
+  pointer-events: visiblePainted;
+}
+.node.leaf image {
+  filter: hue-rotate(190deg) saturate(1.35) brightness(1.12);
+}
+.node.spine image {
+  filter: saturate(1.05) brightness(1.02);
+}
+.node.selected .switch-frame, .node.selected circle { stroke: #fff; stroke-width: 3; }
 .node.selected text {
   font-size: 18px;
   font-weight: 800;

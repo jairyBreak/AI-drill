@@ -151,6 +151,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_static("dashboard.css", "text/css; charset=utf-8")
         elif route == "/dashboard.js":
             self._send_static("dashboard.js", "application/javascript; charset=utf-8")
+        elif route == "/switch.svg":
+            path = os.path.join(os.path.dirname(__file__), "125_layer-2-remote-switch.37d2c74448.svg")
+            try:
+                with open(path, "rb") as f:
+                    self._send_bytes(f.read(), "image/svg+xml")
+            except FileNotFoundError:
+                self._send_bytes(b"not found", "text/plain; charset=utf-8", status=404)
         elif route == "/api/topology":
             self._send_json(self.server.controller.get_dashboard_topology())
         elif route == "/api/snapshot":
