@@ -6,7 +6,7 @@
 VENV_PYTHON="$(which python3)"
 P4RUN_CMD="sudo env PATH=$PATH $(which p4run)"
 CONTROLLER_CMD="$VENV_PYTHON all_controller.py"
-ML_DASHBOARD_CMD="$VENV_PYTHON realtime_ml_controller.py --web-port ${DASHBOARD_PORT:-8080}"
+ML_DASHBOARD_CMD="$VENV_PYTHON realtime_ml_controller.py --web-host ${DASHBOARD_HOST:-127.0.0.1} --web-port ${DASHBOARD_PORT:-8080}"
 RATE_LIMITER_CMD="sudo -n env PATH=$PATH $VENV_PYTHON rate_limiter.py"
 DASHBOARD_ENABLE="${DASHBOARD_ENABLE:-1}"
 
@@ -63,7 +63,7 @@ sudo -v
         else
             echo -e "\n[排程] 啟動 realtime_ml_controller.py dashboard"
             $ML_DASHBOARD_CMD > controller_output.log 2>&1 &
-            echo -e "\n[系統] 背景設施全部就緒。Dashboard: http://127.0.0.1:${DASHBOARD_PORT:-8080}"
+            echo -e "\n[系統] 背景設施全部就緒。Dashboard: http://${DASHBOARD_HOST:-127.0.0.1}:${DASHBOARD_PORT:-8080}"
         fi
     fi
     echo ""
