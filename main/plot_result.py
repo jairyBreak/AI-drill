@@ -106,7 +106,7 @@ def plot_switch_utilization(loaded, out_img):
     ax.set_xticklabels(labels)
     ax.set_xlabel("Spine switch")
     ax.set_ylabel("Mean utilization (load / capacity)")
-    ax.set_title("Per-Switch Utilization by Algorithm — flatter & lower σ = better balance")
+    ax.set_title("Per-Switch Utilization")
     ax.legend(loc='upper right')
     ax.grid(True, axis='y', linestyle='--', alpha=0.6)
 
@@ -169,7 +169,7 @@ def main():
                      color=color, alpha=0.8, markersize=3, linewidth=1.8)
     axes[0].set_ylabel("Latency (ms, per-sec peak)")
     axes[0].set_title(f"Algorithm Comparison — Hardware Ground Truth "
-                      f"(8-spine, warmup {warmup:.0f}s dropped; tail stats in summary table)")
+                      f"(8-spine, warmup {warmup:.0f}s dropped)")
     axes[0].legend(loc='upper left')
     axes[0].grid(True, linestyle='--', alpha=0.6)
 
