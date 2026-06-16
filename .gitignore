@@ -39,10 +39,18 @@ main/live_telemetry.csv
 main/live_telemetry*.png
 main/confusion_matrix.png
 
-# Algorithm-comparison temp results (regenerated each run by baselines / ML controller)
-main/research_results/data/validation/comparison_*.csv
-main/research_results/plots/validation/algorithm_comparison.png
-main/research_results/plots/validation/switch_utilization.png
+# Generated research outputs — datasets, validation runs, plots (kept local, not in repo)
+main/research_results/data/datasets/
+main/research_results/data/validation/
+main/research_results/plots/
+
+# Hyperparameter tuning trial logs + backups (generated, kept local)
+main/tuning_results/
+main/backups/
+
+# Prototype data artifacts in bruh/ (the .py code stays tracked, the data does not)
+main/bruh/*.csv
+main/bruh/*-dump.txt
 
 # Temporary analysis slices
 main/temp_x_*.csv

@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter("ignore", ResourceWarning)
 
-# 導入 1s 拓樸無關控制器與 helper 邏輯
+# 1s topo-independent predictor + helper
 from realtime_1s_predictor_topo_indep import Realtime1sPredictorTopoIndep, FEATURE_NAMES, PORTS, CAPACITY
 from topo_independent_helper import transform_to_topo_independent
 
@@ -21,11 +21,9 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
     print(f" 數據: {output_csv} | 圖表: {output_img}")
     print("="*100 + "\n")
     
-    # 確保目錄存在
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     os.makedirs(os.path.dirname(output_img), exist_ok=True)
-    
-    # 初始化預測器
+
     predictor = Realtime1sPredictorTopoIndep()
 
     results = []
@@ -37,16 +35,16 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
     
     try:
         while time.time() - start_time < test_duration:
-            # 1. 採集 1 秒數據與真實標籤
+            # 1. collect 1s data + ground truth
             data_row = predictor.collect_1s_data()
             raw_history.append(data_row)
-            
-            # 2. 將歷史轉為 DataFrame 進行特徵計算
+
+            # 2. history -> features
             df_history = pd.DataFrame(list(raw_history))
             df_transformed = transform_to_topo_independent(df_history, PORTS, CAPACITY, K=3)
             last_row = df_transformed.iloc[-1]
-            
-            # 3. 模型預測
+
+            # 3. predict
             X = pd.DataFrame([last_row[FEATURE_NAMES]])
             preds = {}
             for k, m in predictor.models.items():
@@ -55,7 +53,7 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
                     p = np.expm1(p)
                 preds[k] = p
             
-            # 4. 記錄數據
+            # 4. record
             now_dt = datetime.now()
             entry = {
                 'Timestamp': now_dt,
@@ -68,7 +66,7 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
             }
             results.append(entry)
             
-            # 5. 打印狀態
+            # 5. print status
             now_str = now_dt.strftime('%H:%M:%S')
             print(f"{now_str:^10} | "
                   f"{preds['latency']:5.1f}/{data_row['Real_HW_Latency_ms']:4.1f} | "
@@ -82,16 +80,14 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
         print("沒有數據可供保存。")
         return
 
-    # 保存數據
+    # save data
     res_df = pd.DataFrame(results)
     res_df.to_csv(output_csv, index=False)
-    print(f"\n數據已寫入 {output_csv}")
+    print(f"\ndata written -> {output_csv}")
 
-    # 繪圖前處理
     plot_df = res_df.copy()
-    
-    # 設置繪圖
-    print("正在生成對比圖表...")
+
+    print("generating comparison plot...")
     fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
     t_axis = range(len(plot_df))
 
@@ -103,7 +99,7 @@ def run_1s_validation(test_duration=60, output_csv="research_results/data/valida
     axes[0].grid(True, linestyle='--', alpha=0.6)
     axes[0].set_title("Network Performance Validation (1s Scale - 8Port Topo)")
     
-    # 動態計算 Y 軸上限
+    # dynamic Y-axis upper bound
     y_max_lat = max(plot_df['Real_Lat'].max(), plot_df['Pred_Lat'].max()) * 1.2
     if np.isnan(y_max_lat) or y_max_lat < 50: y_max_lat = 100
     axes[0].set_ylim(-5, y_max_lat)

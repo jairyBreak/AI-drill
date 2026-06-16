@@ -224,7 +224,7 @@ Each of 1500 iterations:
 - Labels: `Label_Max_Path_Delay_ms` (INT accumulated delay), `Label_Total_Drop_Rate_Percent`
 - Weights change every 30s within each experiment (covers diverse load scenarios)
 
-Output: `research_results/data/datasets/rolling_training_dataset.csv` (~63k rows)
+Output: `research_results/data/datasets/rolling_training_dataset.csv` (~31.7k rows)
 
 ---
 
@@ -290,13 +290,13 @@ Converts raw per-port measurements into a **fixed 39-feature vector** regardless
 
 | File | Target | Status |
 |---|---|---|
-| `rf_model_latency_1s.pkl` | `Label_Max_Path_Delay_ms`, log1p | **Not yet trained** |
-| `rf_model_loss_1s.pkl` | `Label_Total_Drop_Rate_Percent` | **Not yet trained** |
-| `rf_model_anomaly_1s.pkl` | Anomaly classifier (loss > 0.1%) | **Not yet trained** |
+| `rf_model_latency_1s.pkl` | `Label_Max_Path_Delay_ms`, log1p | **Trained** |
+| `rf_model_loss_1s.pkl` | `Label_Total_Drop_Rate_Percent` | **Trained** |
+| `rf_model_anomaly_1s.pkl` | Anomaly classifier (loss > 0.1%) | **Trained** |
 
-Run: `python3 train_1s_models.py`
+Retrain: `python3 train_1s_models.py`
 
-**⚠ Known bug**: `CAPACITY` dict in `train_1s_models.py` uses stale values instead of the actual rate-limited capacities `{2:0.48, 3:0.56, 4:0.64, 5:0.72, 6:0.80, 7:0.88, 8:0.96, 9:1.04}` (link bw × 0.8 for the current 0.6→1.3 topology). Fix before training. (`realtime_1s_predictor_topo_indep.py` already carries the correct dict.)
+**⚠ Known bug**: `CAPACITY` dict in `train_1s_models.py` uses stale values `{2:0.8, …, 6:1.2}` instead of the actual rate-limited capacities `{2:0.48, 3:0.56, 4:0.64, 5:0.72, 6:0.80, 7:0.88, 8:0.96, 9:1.04}` (link bw × 0.8 for the current 0.6→1.3 topology). The shipped models were trained with this stale dict, so their utilization-derived features are miscalibrated — fix and retrain to correct. The **live controller is unaffected**: it derives effective capacity itself and uses the RF outputs only as an optional secondary signal. (`realtime_1s_predictor_topo_indep.py` already carries the correct dict.)
 
 ---
 
@@ -410,22 +410,22 @@ All four are the same pipeline with a different W-ECMP/DRILL component layout (`
 
 The "DRILL" baseline (`baseline_drill.py`, one capacity-blind 8-port group) is the **incorrect** DRILL — it ignores symmetry and lets the shortest-queue pick favour slow links. The **correct** DRILL is the static `W-ECMP+DRILL` config (`realtime_ml_controller.py` with `ML_WEIGHT_ENABLE=False`): symmetric capacity pairs + capacity weights + within-pair micro-balancing, weights frozen at the `[3,4,5,6]` anchor. The head-to-head the project argues is **correct DRILL (static) vs. +ML**. Setting `ML_WEIGHT_ENABLE=False` writes `comparison_wecmp_drill.csv`; `True` writes `comparison_ml.csv`; `plot_result.py --ML` overlays just those two.
 
-**Elephant/mice (`--elmice`), 60s, 5s warmup dropped** *(measured on the earlier symmetric-pair topology — 0.6/0.8/1.0/1.2 in pairs; re-run pending for the current 0.6→1.3 all-distinct config, but the grouping reduces to the same `[3,4,5,6]` so behaviour is expected to carry over):*
+**Elephant/mice (`--elmice`), 60s, 5s warmup dropped** *(measured on the current 0.6→1.3 all-distinct topology):*
 
-| Algorithm | Lat p50 | Lat p95 | Lat max | Loss E2E | Mbps | Util σ |
-|---|--:|--:|--:|--:|--:|--:|
-| ECMP | 101.35 | 251.54 | 564.74 | 0.00 | 2.65 | 0.160 |
-| W-ECMP | 37.66 | 334.10 | 457.67 | 0.00 | 2.62 | 0.161 |
-| DRILL | **22.57** | 170.42 | 340.47 | 0.00 | 2.86 | 0.148 |
-| **W-ECMP+DRILL+ML** | 32.04 | **160.17** | **176.28** | 0.00 | 2.83 | **0.062** |
+| Algorithm | Lat p50 | Lat p95 | Lat p99 | Throughput | Util σ |
+|---|--:|--:|--:|--:|--:|
+| ECMP | 108.66 | 443.84 | 1185.99 | 2.53 | 0.118 |
+| W-ECMP | 79.64 | 1025.95 | 2485.76 | 2.41 | 0.087 |
+| DRILL (naive) | **18.97** | 159.50 | 187.78 | 2.87 | 0.122 |
+| **W-ECMP+DRILL+ML** | 20.27 | **141.16** | **172.24** | 2.86 | **0.043** |
 
-**Takeaway:** on elephant/mice traffic the full **W-ECMP+DRILL+ML** controller delivers the best tail latency — lowest p95 and a dramatically lower max (176ms vs 340–565ms) — and by far the most balanced spine utilization (σ 0.062, ~half of every other approach), while staying within a few ms of DRILL on median. Pure DRILL has the lowest median but is capacity-blind (worse tail and σ); static ECMP/W-ECMP are worst on the tail. (`traffic.py` currently reshuffles assignments per run, so seed it for a strictly fair head-to-head.)
+**Takeaway:** on elephant/mice traffic the full **W-ECMP+DRILL+ML** controller delivers the best tail latency — lowest p95 (141ms) and p99 (172ms), beating even naive DRILL — and by far the most balanced spine utilization (σ 0.043, ~2.8× better than DRILL, ~2× better than W-ECMP), while staying within ~1ms of DRILL on median at matched throughput. Naive DRILL has the lowest median but is capacity-blind (worse tail and σ); static ECMP/W-ECMP are worst on the tail (p99 6.9× and 14.4× higher than ML). (`traffic.py` currently reshuffles assignments per run, so seed it for a strictly fair head-to-head.)
 
 ---
 
 ## Known Gaps
 
-1. **1s models missing** — `rf_model_*_1s.pkl` don't exist. The controller still operates via its **hardware-evidence triggers** (real loss / queue / util); RF predictions are an optional secondary path. To train: `rolling_dataset_builder.py` (data) → `train_1s_models.py`.
+1. **1s models trained with stale CAPACITY** — `rf_model_*_1s.pkl` now exist (trained from `rolling_training_dataset.csv`), but were trained with `train_1s_models.py`'s stale `CAPACITY` dict (see #2), so their utilization features are miscalibrated. The controller's decisions don't depend on them — it runs on **hardware-evidence triggers** (real loss / queue / util) and uses RF predictions only as an optional earlier-acting signal. To regenerate: `rolling_dataset_builder.py` (data) → fix CAPACITY → `train_1s_models.py`.
 2. **`train_1s_models.py` / `realtime_1s_predictor.py` CAPACITY bug** — these use raw `{2:0.8, …}` instead of the effective rate-limited `{2:0.48, …}`, so models trained from them get miscalibrated utilization features. The **live controller is unaffected** — it derives effective capacity (link bw × 0.8) itself.
 3. **10s models trained on s1–s4 only** — `telemetry_collector.py` reads ports 2–5. s5–s8 were invisible during collection. Simplified models have no knowledge of the higher-BW spine pair.
 4. **10s dataset used 2 ECMP components** — `dataset_builder.py` applied 2-element weight lists. The network has 4 components. Old models never saw s5–s8 weighted.
@@ -472,7 +472,10 @@ The "DRILL" baseline (`baseline_drill.py`, one capacity-blind 8-port group) is t
 | `iperf_parser.py` | iperf3 UDP + concurrent ping → latency/jitter/loss labels |
 | `build_ecdf_features.py` | ECDF rank-transform + 3 composite congestion indices |
 | `research_results/data/datasets/training_dataset_ecdf_cleaned.csv` | Active 10s training dataset (~4887 rows, 134 cols) |
-| `research_results/data/datasets/rolling_training_dataset.csv` | Active 1s training dataset (~63k rows) |
+| `research_results/data/datasets/rolling_training_dataset.csv` | Active 1s training dataset (~31.7k rows) |
 | `rf_model_latency_simplified.pkl` | Trained 10s latency predictor |
 | `rf_model_loss_simplified.pkl` | Trained 10s loss rate predictor |
 | `rf_model_anomaly_simplified.pkl` | Trained 10s congestion anomaly classifier |
+| `rf_model_latency_1s.pkl` | Trained 1s latency predictor (loaded by the live controller) |
+| `rf_model_loss_1s.pkl` | Trained 1s loss rate predictor (loaded by the live controller) |
+| `rf_model_anomaly_1s.pkl` | Trained 1s congestion anomaly classifier (loaded by the live controller) |

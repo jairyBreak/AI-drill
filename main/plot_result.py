@@ -1,17 +1,9 @@
 """
-plot_result.py — 疊圖比較 ECMP / W-ECMP / W-ECMP+DRILL+ML 三種演算法
-
-沿用 plot_1s_metrics.py 的繪圖風格 (matplotlib，2~3 panel，dpi=150)，把各演算法
-產生的 CSV (相同欄位：Real_Lat / Real_Loss / Total_Mbps / Util_Sum) 疊在一起比較。
-
-各 CSV 來源：
-  * ECMP            : baseline_ecmp.py        -> comparison_ecmp.csv
-  * W-ECMP          : baseline_wecmp.py       -> comparison_wecmp.csv
-  * W-ECMP+DRILL+ML : realtime_ml_controller.py -> comparison_ml.csv (相同欄位，直接比較)
-
-用法：
+plot_result.py — overlay-compare ECMP / W-ECMP / DRILL / W-ECMP+DRILL+ML.
+Loads each algorithm's CSV (same columns) and overlays them + prints a summary table.
+Usage:
     python3 plot_result.py
-    python3 plot_result.py --ML        # 只比較 W-ECMP+DRILL 靜態 vs W-ECMP+DRILL+ML 兩條
+    python3 plot_result.py --ML        # only W-ECMP+DRILL static vs +ML
     python3 plot_result.py ECMP=path1.csv W-ECMP=path2.csv ML=path3.csv
 """
 
@@ -25,10 +17,10 @@ VAL_DIR = "research_results/data/validation"
 OUT_IMG = "research_results/plots/validation/algorithm_comparison.png"
 OUT_IMG_UTIL = "research_results/plots/validation/switch_utilization.png"
 
-# 丟棄前 N 秒暖機 (佇列填充/規則安裝過渡)；可用 warmup=N 覆寫
+# drop first N seconds as warmup (queue fill / rule-install transient); override with warmup=N
 DEFAULT_WARMUP_SEC = 5
 
-# label -> (csv 路徑, 顏色)
+# label -> (csv path, color)
 DEFAULT_RUNS = {
     "ECMP":            (f"{VAL_DIR}/comparison_ecmp.csv",  "#1f77b4"),
     "W-ECMP":          (f"{VAL_DIR}/comparison_wecmp.csv", "#ff7f0e"),
@@ -36,8 +28,7 @@ DEFAULT_RUNS = {
     "W-ECMP+DRILL+ML": (f"{VAL_DIR}/comparison_ml.csv",    "#2ca02c"),
 }
 
-# --ML 模式：只比較固定容量比例權重 (靜態) vs ML 動態調權，兩者皆 W-ECMP+DRILL，唯一差別是
-# 權重會不會被 ML 改動 -> 直接看出 ML 控制本身的增益。
+# --ML mode: static capacity weights vs ML dynamic weights (both W-ECMP+DRILL) -> isolates the ML gain
 ML_RUNS = {
     "W-ECMP+DRILL":    (f"{VAL_DIR}/comparison_wecmp_drill.csv", "#ff7f0e"),
     "W-ECMP+DRILL+ML": (f"{VAL_DIR}/comparison_ml.csv",          "#2ca02c"),
@@ -45,7 +36,7 @@ ML_RUNS = {
 
 
 def parse_args():
-    """支援 label=path 覆寫與 warmup=N；回傳 (runs, warmup_sec)。"""
+    """Supports label=path overrides and warmup=N; returns (runs, warmup_sec)."""
     warmup = DEFAULT_WARMUP_SEC
     ml_only = False
     label_args = []
@@ -62,7 +53,7 @@ def parse_args():
         else:
             label_args.append((k, v))
 
-    # --ML：只比較 W-ECMP+DRILL 靜態 vs ML 兩條 (忽略其餘 label= 覆寫)
+    # --ML: only static vs ML (ignore other label= overrides)
     if ml_only:
         return ML_RUNS, warmup
 
@@ -76,17 +67,13 @@ def parse_args():
 
 
 def plot_switch_utilization(loaded, out_img):
-    """各演算法每個 spine 的平均利用率 (load/cap) 長條圖。
-
-    util 已用容量正規化，因此「越平」代表負載越貼近容量比例 (越平衡)；
-    圖例附上各演算法跨 spine 的標準差 σ (越小越平衡)。
-    """
-    # 從第一個 df 找出 util_s* 欄位 (依編號排序)
+    """Per-spine mean utilization (load/cap) bar chart; legend shows cross-spine σ (lower = balanced)."""
+    # util_s* columns from the first df, sorted by number
     first_df = next(iter(loaded.values()))[0]
     util_cols = sorted([c for c in first_df.columns if c.startswith('util_s')],
                        key=lambda c: int(c[len('util_s'):]))
     if not util_cols:
-        print("  [略過] CSV 無 per-switch util 欄位 (util_s*)，跳過交換機利用率圖")
+        print("  [skip] no per-switch util columns (util_s*)")
         return
 
     labels = [c.replace('util_', '') for c in util_cols]   # s1..s8
@@ -112,15 +99,11 @@ def plot_switch_utilization(loaded, out_img):
 
     plt.tight_layout()
     plt.savefig(out_img, dpi=150)
-    print(f"交換機利用率圖已存至 {out_img}")
+    print(f"switch utilization plot saved -> {out_img}")
 
 
 def end_to_end_loss(df):
-    """從累積計數器算端到端丟包率 (%)：(Σenq - Σrecv) / Σenq，跨整段視窗。
-
-    用累積值而非每秒夾值差，佇列堆積/排空會自然抵消，避免瞬時估計的高估偏差。
-    缺欄位時退回瞬時 Real_Loss 平均。
-    """
+    """E2E loss % from cumulative counters: (Σenq - Σrecv) / Σenq; falls back to mean Real_Loss."""
     if 'Cum_Enq' in df.columns and 'Cum_Recv' in df.columns and len(df) >= 1:
         enq  = df['Cum_Enq'].iloc[-1]  - df['Cum_Enq'].iloc[0]
         recv = df['Cum_Recv'].iloc[-1] - df['Cum_Recv'].iloc[0]
@@ -136,34 +119,34 @@ def main():
     loaded = {}
     for label, (path, color) in runs.items():
         if not os.path.exists(path):
-            print(f"  [略過] 找不到 {label} 的 CSV: {path}")
+            print(f"  [skip] CSV not found for {label}: {path}")
             continue
         df = pd.read_csv(path)
-        # 以 Timestamp 換算「實際經過秒數」；各演算法每輪耗時不同 (ML 較慢)，用真實時間對齊才公平。
+        # use Timestamp for true elapsed seconds (runs differ in duration; align by real time)
         try:
             ts = pd.to_datetime(df['Timestamp'])
             elapsed = (ts - ts.iloc[0]).dt.total_seconds().to_numpy()
         except Exception:
             elapsed = np.arange(len(df), dtype=float)
 
-        # 丟棄前 warmup 秒 (規則安裝過渡 + 佇列填充)，再把時間軸歸零
+        # drop the first warmup seconds, then zero the time axis
         mask = elapsed >= warmup
         if mask.sum() < 2:
-            print(f"  [略過] {label} 暖機後資料不足 (run < {warmup}s?)")
+            print(f"  [skip] {label} too little data after warmup (run < {warmup}s?)")
             continue
         df_w = df[mask].reset_index(drop=True)
         x_w = elapsed[mask] - elapsed[mask][0]
         loaded[label] = (df_w, color, x_w)
-        print(f"  [載入] {label}: {len(df)} 列 / {elapsed[-1]:.0f}s "
-              f"(丟棄前 {warmup:.0f}s -> 剩 {len(df_w)} 列)  <- {path}")
+        print(f"  [load] {label}: {len(df)} rows / {elapsed[-1]:.0f}s "
+              f"(dropped first {warmup:.0f}s -> {len(df_w)} rows)  <- {path}")
 
     if not loaded:
-        print("沒有任何可用的 CSV，無法繪圖。")
+        print("no usable CSV, nothing to plot.")
         return
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
 
-    # Panel 1: 硬體延遲 — 每秒峰值佇列延遲原始值 (不平滑；峰值本身就是該秒的最壞情況)
+    # Panel 1: hardware latency — per-second peak queue delay (raw; the peak is the worst case)
     for label, (df, color, x) in loaded.items():
         axes[0].plot(x, df['Real_Lat'], 'o-', label=label,
                      color=color, alpha=0.8, markersize=3, linewidth=1.8)
@@ -173,7 +156,7 @@ def main():
     axes[0].legend(loc='upper left')
     axes[0].grid(True, linestyle='--', alpha=0.6)
 
-    # Panel 2: 瞬時丟包 (每秒估計，受佇列堆積影響有雜訊；端到端值見摘要表)
+    # Panel 2: instantaneous loss (per-sec estimate, noisy; E2E value in the summary table)
     for label, (df, color, x) in loaded.items():
         axes[1].plot(x, df['Real_Loss'], 'o-', label=label,
                      color=color, alpha=0.8, markersize=3, linewidth=1.8)
@@ -181,7 +164,7 @@ def main():
     axes[1].legend(loc='upper left')
     axes[1].grid(True, linestyle='--', alpha=0.6)
 
-    # Panel 3: 總吞吐量
+    # Panel 3: total throughput
     for label, (df, color, x) in loaded.items():
         if 'Total_Mbps' in df.columns:
             axes[2].plot(x, df['Total_Mbps'], 'o-', label=label,
@@ -193,17 +176,17 @@ def main():
 
     plt.tight_layout()
     plt.savefig(OUT_IMG, dpi=150)
-    print(f"\n比較圖已存至 {OUT_IMG}")
+    print(f"\ncomparison plot saved -> {OUT_IMG}")
 
-    # 各交換機利用率 (另存一張圖)
+    # per-switch utilization (separate figure)
     plot_switch_utilization(loaded, OUT_IMG_UTIL)
 
-    # 摘要統計表 — 延遲以每秒峰值的 p50/p95/max 表示 (尾延遲才是 load balancer 的重點，
-    # 不用平均，避免把峰值平均掉)；Loss = 端到端累積丟包率；Util σ = 跨 spine 利用率標準差 (越小越平衡)
+    # summary table — latency as p50/p95/max of per-second peaks (tail is what matters, not mean);
+    # Loss = E2E cumulative; Util σ = cross-spine utilization spread (lower = balanced)
     long_run = max((float(x[-1]) if len(x) else 0.0) for _, _, x in loaded.values()) > 90.0
     tail_label = "Lat p99" if long_run else "Lat max"
-    print(f"\n=== 指標摘要 (丟棄前 {warmup:.0f}s 暖機；延遲為每秒峰值的分位數) ===")
-    print(f"{'演算法':^18} | {'Lat p50':^8} | {'Lat p95':^8} | {tail_label:^8} | "
+    print(f"\n=== metric summary (first {warmup:.0f}s warmup dropped; latency = per-sec peak quantiles) ===")
+    print(f"{'Algorithm':^18} | {'Lat p50':^8} | {'Lat p95':^8} | {tail_label:^8} | "
           f"{'Loss(%)E2E':^11} | {'Mbps':^7} | {'Util σ':^7}")
     print("-" * 88)
     for label, (df, _, _) in loaded.items():

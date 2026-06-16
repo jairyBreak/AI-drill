@@ -9,11 +9,11 @@ import re
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-# 導入控制器邏輯
+# controller logic
 from realtime_ml_controller import MLController, RankECDF
 
 def get_single_ping():
-    """執行一次同步 Ping 並返回延遲（ms），超時 2s"""
+    """One synchronous ping -> latency (ms), 2s timeout."""
     try:
         output = subprocess.check_output(
             ["mx", "h1", "ping", "-c", "1", "-W", "2.0", "10.0.2.2"],
@@ -31,9 +31,9 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
     print("="*95 + "\n")
     
     ctrl = MLController()
-    
-    # 預熱
-    print(" [系統] 正在預熱資料緩存 (10s)...", end='', flush=True)
+
+    # warm up
+    print(" [system] warming up data cache (10s)...", end='', flush=True)
     for _ in range(10):
         ctrl.collect_window(duration=1.0)
         print(".", end='', flush=True)
@@ -48,26 +48,26 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
     
     try:
         while time.time() - start_time < test_duration:
-            # 1. 採集特徵窗口
+            # 1. collect feature window
             df = ctrl.collect_window(duration=1.0)
             X, feats = ctrl.extract_features(df)
-            
-            # 2. 獲取背景執行緒採集的真實值 (10s 平均)
+
+            # 2. ground truth from background collector (10s avg)
             real_lat = ctrl.real_latency
-            
-            # 3. 預測與逆對數轉換
+
+            # 3. predict + invert log
             pred_log = ctrl.models['latency'].predict(X)[0]
             raw_pred_lat = np.expm1(pred_log)
-            
-            # 4. 非對稱 EMA 平滑
+
+            # 4. asymmetric EMA smoothing
             alpha = 0.8 if raw_pred_lat < smoothed_lat else 0.3
             smoothed_lat = (alpha * raw_pred_lat) + ((1 - alpha) * smoothed_lat)
-            
-            # 5. 記錄數據
+
+            # 5. record
             now_dt = datetime.now()
             now_str = now_dt.strftime('%H:%M:%S')
-            
-            # 即使超時也記錄預測值，但標註真實值為 NaN
+
+            # record prediction even on timeout (real value = NaN)
             entry = {
                 'Timestamp': now_dt,
                 'Real_Latency': real_lat if real_lat > 0 else np.nan,
@@ -77,7 +77,7 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
             }
             results.append(entry)
             
-            # 6. 打印
+            # 6. print
             if real_lat > 0:
                 print(f"{now_str:^10} | {real_lat:8.2f} ms | {smoothed_lat:10.2f} ms | OK")
             else:
@@ -90,28 +90,26 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
         print("沒有數據可供保存。")
         return
 
-    # 保存 CSV
+    # save CSV
     res_df = pd.DataFrame(results)
     res_df.to_csv(output_csv, index=False)
-    print(f"\n數據已成功寫入 {output_csv}")
+    print(f"\ndata written -> {output_csv}")
 
-    # 繪製折線圖
-    print("正在生成對比圖表...")
+    print("generating comparison plot...")
     plt.figure(figsize=(12, 6))
-    
-    # 設置繪圖數據
+
     t_axis = range(len(res_df))
     plt.plot(t_axis, res_df['Real_Latency'], 'o-', label='Real Latency (Ping)', color='blue', alpha=0.6, markersize=4)
     plt.plot(t_axis, res_df['Predicted_Latency'], 's-', label='Predicted Latency (ML EMA)', color='red', linewidth=2)
     
-    # 圖表修飾
+    # decoration
     plt.title(f"Real vs. Predicted Latency Over Time : 0.4 M * 10 Flows (Duration: {test_duration}s)")
     plt.xlabel("Sampling Steps (approx 1.5s per step)")
     plt.ylabel("Latency (ms)")
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.7)
     
-    # 處理縱軸 Y 為對數比例（如果延遲跨度太大）
+    # log-scale Y if latency spans too wide
     if res_df['Real_Latency'].max() > 1000:
         plt.yscale('symlog')
         plt.ylabel("Latency (ms) - Log Scale")
@@ -121,7 +119,7 @@ def run_visual_validation(test_duration=60, output_csv="latency_validation_4.csv
     plt.savefig(output_img)
     print(f"對比圖表已保存至 {output_img}")
     
-    # 打印最終統計
+    # final stats
     valid_df = res_df.dropna(subset=['Real_Latency'])
     if not valid_df.empty:
         mae = np.mean(np.abs(valid_df['Real_Latency'] - valid_df['Predicted_Latency']))

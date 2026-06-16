@@ -9,21 +9,18 @@ from sklearn.metrics import r2_score, mean_absolute_error
 
 CSV_PATH = "research_results/data/datasets/training_dataset_ecdf.csv"
 
-# ==========================================
-# 經典進化配置 (The Evolved Baseline)
-# ==========================================
-# 回歸最初表現最好的參數組合，並輔以大森林平滑
+# RF params for the 10s models (large forest, deeper trees)
 BEST_PARAMS = dict(
-    n_estimators=800,      # 增加樹的數量到 1000 (這是安全加法，通常能降誤差)
-    max_depth=20,           # 回到原本最強的深度
-    min_samples_leaf=2,     # 回到原本最強的緩衝
-    max_features=0.8,       # 全局特徵視角
+    n_estimators=800,
+    max_depth=20,
+    min_samples_leaf=2,
+    max_features=0.8,
     bootstrap=True,
     n_jobs=-1,
     random_state=42
 )
 
-# 最初最強的特徵清單 (30) + 新特徵
+# feature list (30 base + extras)
 SELECTED_FEATURES = [
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
     "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
@@ -41,7 +38,7 @@ def add_evolved_features(df):
     df = df.copy()
     
     
-    # 確保原始特徵完整
+    # ensure base features present
     for i in [2, 3, 4, 5]:
         df[f"Norm_Load_P{i}"] = df[f"src1_port{i}_mbps_mean"] / df[f"Weight_Port{i}"].replace(0, 1)
     
@@ -94,7 +91,7 @@ def train_evolved_baseline():
             mae_list.append(mean_absolute_error(y_te_raw, preds_orig))
 
             #preds = model.predict(X_te)
-            #r2_list.append(r2_score(y_te_raw, preds))  # 直接算真實世界的 R2
+            #r2_list.append(r2_score(y_te_raw, preds))  # R2 in real space
             #mae_list.append(mean_absolute_error(y_te_raw, preds))
             
         unit = "%" if name == "loss" else "ms"
@@ -105,7 +102,7 @@ def train_evolved_baseline():
         joblib.dump(final_model, f"rf_model_{name}_simplified.pkl")
 
         importances = final_model.feature_importances_
-        indices = np.argsort(importances)[::-1] # 由大到小排序
+        indices = np.argsort(importances)[::-1] # descending
         
         print(f"\n--- [{name}] Top 10 特徵重要性 ---")
         for i in range(len(available_features)):
@@ -113,7 +110,7 @@ def train_evolved_baseline():
             feat_weight = importances[indices[i]]
             print(f"{i+1:2d}. {feat_name:<28} ({feat_weight:.4f})")
         print("-" * 40 + "\n")
-    # 異常分類
+    # anomaly classifier
     X, y = df[available_features], (df["Label_Loss_Rate"] > 0.001).astype(int)
     clf = RandomForestClassifier(**BEST_PARAMS)
     clf.fit(X, y)

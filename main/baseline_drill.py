@@ -1,16 +1,9 @@
 """
-baseline_drill.py — 純 DRILL 基準 (無 group、無加權、無 ML)
-
-把全部 spine 放進「單一 component」(num_nhops=N)、W-ECMP selector 只有一個 member，
-因此每個封包都進入這個 component，run_drill 在全部 N 個 spine 中隨機抽 2 個 + 記憶埠，
-挑佇列最短者 —— 純 DRILL 逐封包負載平衡，無容量先驗。
-用來與 ECMP / W-ECMP / W-ECMP+DRILL+ML 控制器比較。
-
-用法 (需先 sudo p4run；本腳本取代 all_controller 的設定)：
-    python3 baseline_drill.py [量測秒數]
-
-預設量測 60 秒，輸出沿用既有 plot_1s_metrics CSV 格式。
-流量請另開終端機用 traffic.py 產生 (本腳本不管理流量)。
+baseline_drill.py — pure DRILL baseline (no group, no weighting, no ML).
+All spines in one component (num_nhops=N), single selector member -> every packet enters it and
+run_drill picks the shortest of 2 random ports + memory. Capacity-blind per-packet balancing.
+Usage (run sudo p4run first; this replaces all_controller's config):
+    python3 baseline_drill.py [duration_s]   (default 60; traffic via traffic.py separately)
 """
 
 import sys

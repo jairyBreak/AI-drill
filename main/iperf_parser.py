@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 PING_COUNT = 100  # enough samples for stable p99 estimation
 
 def run_ping_measurement(source_host: str, target_ip: str, duration: int, result_dict: dict):
-    """使用 ping 測量 RTT，同時收集 100 個個別樣本以計算 p99 延遲"""
+    """Measure RTT via ping; collect 100 samples for p99 latency."""
     cmd = ["mx", source_host, "ping", "-c", str(PING_COUNT), "-i", "0.1", target_ip]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -31,19 +31,15 @@ def run_ping_measurement(source_host: str, target_ip: str, duration: int, result
         result_dict['p99_latency'] = -1.0
 
 def run_iperf_and_get_metrics(source_host: str, target_ip: str, bw_per_flow_str: str, duration: int = 10, num_flows: int = 15):
-    """
-    使用 iperf3 執行測量，透過 TCP 控制通道確保報告必達，並解析 JSON 獲得絕對精準的丟包率。
-    回傳 (avg_latency, p99_latency, avg_jitter, avg_loss_rate)。
-    """
-    logging.info(f"開始從 {source_host} 對 {target_ip} 發起 {num_flows} 條 iperf3 微流 (每條 {bw_per_flow_str})...")
+    """Run iperf3 (UDP), parse JSON for exact loss rate. Returns (avg_latency, p99_latency, avg_jitter, avg_loss_rate)."""
+    logging.info(f"starting {num_flows} iperf3 flows {source_host}->{target_ip} ({bw_per_flow_str} each)...")
 
-    # 1. 啟動 Ping 背景測量 (負責收集 Y_latency 與 Y_p99_latency)
+    # 1. ping in the background (latency + p99)
     ping_result = {'latency': -1.0, 'p99_latency': -1.0}
     ping_thread = threading.Thread(target=run_ping_measurement, args=(source_host, target_ip, duration, ping_result))
     ping_thread.start()
     
-    # 2. 執行 iperf3 
-    # 參數解析: -u (UDP), -b (單流頻寬), -t (秒數), -P (平行微流數量), -J (JSON 輸出)
+    # 2. run iperf3: -u UDP, -b per-flow bw, -t seconds, -P parallel flows, -J JSON
     cmd = [
         "mx", source_host, 
         "iperf3", "-c", target_ip, 
@@ -59,10 +55,9 @@ def run_iperf_and_get_metrics(source_host: str, target_ip: str, bw_per_flow_str:
     avg_jitter = -1.0
     
     try:
-        # iperf3 會自己管理 15 條流，並在結束後匯總成一份 JSON
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
-        # 解析 JSON 輸出
+
+        # parse JSON output
         if result.returncode == 0 or "error" not in result.stdout:
             data = json.loads(result.stdout)
             
@@ -84,7 +79,7 @@ def run_iperf_and_get_metrics(source_host: str, target_ip: str, bw_per_flow_str:
     except Exception as e:
         logging.error(f"[error] {e}")
 
-    # 等待 ping 結束
+    # wait for ping to finish
     ping_thread.join()
     avg_latency = ping_result['latency']
     p99_latency = ping_result['p99_latency']

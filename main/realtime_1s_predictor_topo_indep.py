@@ -11,10 +11,9 @@ import collections
 import math
 from datetime import datetime
 
-# 隱藏警告
 warnings.filterwarnings("ignore")
 
-# 載入 P4-Utils
+# load P4-Utils
 P4_UTILS_PATH = os.environ.get('P4_UTILS_PATH', '/home/p4/p4-utils')
 if P4_UTILS_PATH not in sys.path:
     sys.path.append(P4_UTILS_PATH)
@@ -26,9 +25,7 @@ from topo_independent_helper import transform_to_topo_independent
 
 logging.basicConfig(level=logging.ERROR)
 
-# ==========================================
-# 配置參數 (對應 8-Spine 拓樸)
-# ==========================================
+# ---- config (8-spine topology) ----
 CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 PORTS = list(range(2, 10))
@@ -41,7 +38,7 @@ MODELS = {
     "anomaly": "rf_model_anomaly_1s.pkl"
 }
 
-# 39個拓樸無關模型特徵清單
+# 39 topology-independent model features
 FEATURE_NAMES = [
     "Is_Rehash_Event", "Time_Since_Last_Rehash_s", "Rehash_Impact",
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance", 
@@ -66,24 +63,24 @@ class Realtime1sPredictorTopoIndep:
         self.api_telemetry = SimpleSwitchThriftAPI(self.topo.get_thrift_port(TARGET_LEAF))
         self.api_control = SimpleSwitchThriftAPI(self.topo.get_thrift_port(CONTROL_LEAF))
         
-        # 載入模型
+        # load models
         self.models = {}
         for k, v in MODELS.items():
             if os.path.exists(v):
                 self.models[k] = joblib.load(v)
-                print(f"   - 載入模型 {v} 成功")
+                print(f"   - loaded model {v}")
             else:
-                print(f"   - 警告: 找不到模型檔案 {v}")
+                print(f"   - warning: model not found {v}")
 
         self.prev_bytes = {p: 0 for p in PORTS}
         self.prev_l1_enq = {p: 0 for p in PORTS}
         self.prev_l2_ingress = {p: 0 for p in PORTS}
-        
-        # 用於追蹤歷史數據以正確計算 Trend 特徵
+
+        # history for trend features
         self.raw_history = collections.deque(maxlen=100)
         self.start_time = time.time()
-        
-        # 用於追蹤權重變化與 Rehash 事件
+
+        # weight-change / rehash tracking
         self.last_rehash_time = time.time()
         self.is_rehash_event = 0
         self.prev_weights = {p: 1 for p in PORTS}
@@ -91,19 +88,19 @@ class Realtime1sPredictorTopoIndep:
         self.init_baseline()
 
     def init_baseline(self):
-        """讀取初始 Counter 基準"""
+        """Read initial counter baselines."""
         for p in PORTS:
             try:
                 self.prev_bytes[p] = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
                 self.prev_l1_enq[p] = self.api_control.counter_read('cnt_enq', p)[0]
                 self.prev_l2_ingress[p] = self.api_telemetry.counter_read('cnt_ingress', p)[0]
             except: pass
-        self._prev_sample_t = time.time()   # 上次取樣時間，用於計算真實取樣間隔
-        self._cum_enq = 0                    # 自開始累積的 l1 enqueue 封包數
-        self._cum_recv = 0                   # 自開始累積的 l2 ingress 封包數 (用於端到端丟包率)
+        self._prev_sample_t = time.time()   # last sample time (for true interval)
+        self._cum_enq = 0                    # cumulative l1 enqueue packets
+        self._cum_recv = 0                   # cumulative l2 ingress packets (for E2E loss)
 
     def get_current_weights(self):
-        """從 L1 交換機的 Action Profile 讀取真實權重配置"""
+        """Read live weights from l1's action profile."""
         weights = {p: 1 for p in PORTS}
         try:
             import socket
@@ -144,20 +141,18 @@ class Realtime1sPredictorTopoIndep:
         return weights
 
     def collect_1s_data(self, sleep_before=True):
-        """採集 1 秒的數據點與硬體真實數據。
-
-        sleep_before=False -> 不自己睡，由外層 deadline 步調控制 (各演算法窗長一致才公平)。"""
+        """Collect one 1s data point + hardware ground truth (sleep_before=False: caller paces)."""
         if sleep_before:
             time.sleep(1.0)
         now_t = time.time()
-        # dt = 與上次取樣的真實間隔 (含處理時間)；不可只用 sleep(1.0)，否則處理較慢時吞吐量會被高估
+        # dt = true interval since last sample (incl. processing); not just sleep(1.0)
         dt = now_t - self._prev_sample_t
         self._prev_sample_t = now_t
 
         current_time = now_t
         row = {}
-        
-        # 1. 獲取權重並判斷 Rehash 事件
+
+        # 1. read weights, detect rehash event
         weights = self.get_current_weights()
         if weights != self.prev_weights:
             self.is_rehash_event = 1
@@ -167,19 +162,18 @@ class Realtime1sPredictorTopoIndep:
         total_weight = sum(weights.values())
         if total_weight == 0: total_weight = 1
         
-        # 2. 基礎遙測
+        # 2. telemetry
         qdepths = []
-        
-        # 用於記錄真實 Hardware Latency 與 Loss (Ground Truth)
+
+        # hardware ground-truth latency / loss
         max_hw_latency = 0
         total_delta_enq = 0
         total_drops = 0
-        
-        # 整批讀取：單次 RPC 讀回整個暫存器陣列，取代每埠各一次 register_read。
-        # 把對 BMv2 control plane 的 RPC 從每秒 ~32 次降到 4 次，減少與轉發執行緒的 CPU/鎖競爭。
+
+        # bulk read: one RPC for the whole register array (cuts ~32 RPCs/s to 4)
         q_arr   = self.api_telemetry.register_read('path_max_queue_depth_reg')
         acc_arr = self.api_telemetry.register_read('path_acc_q_delay_reg')
-        # 讀完即整批歸零；量測窗 = 兩次 reset 的間隔。本實驗僅 src_id=1 在用，reset 整列無副作用。
+        # reset after read; measurement window = interval between resets
         self.api_telemetry.register_reset('path_max_queue_depth_reg')
         self.api_telemetry.register_reset('path_acc_q_delay_reg')
 
@@ -198,12 +192,12 @@ class Realtime1sPredictorTopoIndep:
             row[f"Weight_Port{p}"] = weights[p] / total_weight
             
             qdepths.append(q)
-            
-            # 計算真實最大硬體延遲
+
+            # max hardware latency
             if raw_acc_q_delay > max_hw_latency:
                 max_hw_latency = raw_acc_q_delay
-                
-            # 計算硬體真實丟包 (l1_enq - l2_ingress)
+
+            # hardware drops (l1_enq - l2_ingress)
             try:
                 l1_enq_pkts = self.api_control.counter_read('cnt_enq', p)[0]
                 l2_ingress_pkts = self.api_telemetry.counter_read('cnt_ingress', p)[0]
@@ -214,27 +208,26 @@ class Realtime1sPredictorTopoIndep:
                 self.prev_l1_enq[p] = l1_enq_pkts
                 self.prev_l2_ingress[p] = l2_ingress_pkts
 
-                # 瞬時 (每秒) 估計 — 受佇列堆積/延遲影響會偏高，僅供時間序列參考
+                # instantaneous per-sec estimate (biased; time-series only)
                 if delta_enq > 0:
                     drops = max(0, delta_enq - delta_ingress)
                     total_delta_enq += delta_enq
                     total_drops += drops
 
-                # 累積總量 (不夾值，全埠) — 用於端到端正確丟包率
+                # cumulative totals -> correct E2E loss rate
                 self._cum_enq += delta_enq
                 self._cum_recv += delta_ingress
             except: pass
 
-        # 寫入硬體真實數值供終端機顯示
         row['Real_HW_Latency_ms'] = max_hw_latency / 1000.0
         row['Real_HW_Loss_Percent'] = (total_drops / total_delta_enq * 100) if total_delta_enq > 0 else 0.0
         row['Cum_Enq'] = self._cum_enq
         row['Cum_Recv'] = self._cum_recv
 
-        # 時間相關指標，對齊 Dataset 結構
+        # time features (match dataset schema)
         row["Time_Since_Traffic_Start_s"] = current_time - self.start_time
         row["Is_Rehash_Event"] = self.is_rehash_event
-        self.is_rehash_event = 0 # 觸發後歸零
+        self.is_rehash_event = 0  # reset after firing
         row["Time_Since_Last_Rehash_s"] = current_time - self.last_rehash_time
         row["Rehash_Impact"] = math.exp(-row["Time_Since_Last_Rehash_s"])
         
@@ -250,13 +243,8 @@ class Realtime1sPredictorTopoIndep:
                 data_row = self.collect_1s_data()
                 self.raw_history.append(data_row)
                 
-                # 將歷史轉為 DataFrame 進行特徵計算
                 df_history = pd.DataFrame(list(self.raw_history))
-                
-                # 計算拓樸無關特徵
                 df_transformed = transform_to_topo_independent(df_history, PORTS, CAPACITY, K=3)
-                
-                # 取得最後一行作為目前特徵
                 last_row = df_transformed.iloc[-1]
                 X = pd.DataFrame([last_row[FEATURE_NAMES]])
                 

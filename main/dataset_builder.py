@@ -20,11 +20,9 @@ from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [大腦] %(message)s')
 
-# ==========================================
-# 系統全域參數 (8小時強化版)
-# ==========================================
+# ---- global params ----
 MODE = "PRODUCTION_BALANCED" 
-ADDITIONAL_SAMPLES = 1500 # 預計 8 小時可跑完
+ADDITIONAL_SAMPLES = 1500 # ~8 hours to run
 
 MASTER_CSV = "training_dataset_master.csv"
 SOURCE_HOST = "h1"
@@ -36,12 +34,12 @@ DURATION = 10
 CURRENT_CAPACITY = {2: 0.8, 3: 1.0, 4: 1.2, 5: 1.4}
 
 def get_params(iteration_id):
-    """強化版採樣邏輯：極大化最優權重比例 (50%)，確保模型學會『2:3 即低延遲』"""
+    """Sampling logic: bias toward the optimal weight ratio (50%) so the model learns 2:3 = low latency."""
     state_idx = iteration_id % 10
     
-    if state_idx < 5: # OPTIMAL_BALANCED (50% 權重：修復核心問題)
+    if state_idx < 5: # OPTIMAL_BALANCED (50% weight)
         logging.info(f">> 狀態 [{iteration_id}]: OPTIMAL_BALANCED (權重 2:3)")
-        # 測試在最優權重下，負載從低到極高 (1M ~ 12M)
+        # sweep load low->high under optimal weights
         load_mbps = random.uniform(0.1, 0.7)
         flows = random.randint(8, 20)
         return [2, 3], f"{load_mbps:.2f}M", flows

@@ -12,10 +12,9 @@ import collections
 import math
 from datetime import datetime
 
-# 隱藏警告
 warnings.filterwarnings("ignore")
 
-# 載入 P4-Utils
+# load P4-Utils
 P4_UTILS_PATH = os.environ.get('P4_UTILS_PATH', '/home/p4/p4-utils')
 if P4_UTILS_PATH not in sys.path:
     sys.path.append(P4_UTILS_PATH)
@@ -25,9 +24,7 @@ from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 
 logging.basicConfig(level=logging.ERROR)
 
-# ==========================================
-# 配置參數 (與 1s 訓練腳本對齊)
-# ==========================================
+# ---- config (aligned with 1s training script) ----
 CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 PORTS = list(range(2, 10))
@@ -40,7 +37,7 @@ MODELS = {
     "anomaly": "rf_model_anomaly_1s.pkl"
 }
 
-# 完整的 1s 模型特徵清單
+# full 1s model feature list
 FEATURE_NAMES = [
     "Is_Rehash_Event", "Time_Since_Last_Rehash_s", "Rehash_Impact",
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance", 
@@ -61,25 +58,25 @@ class Realtime1sPredictor:
     def __init__(self):
         print(" [系統] 正在初始化 1s 即時預測器...")
         self.topo = load_topo("topology.json")
-        # 需要連線到 Control Leaf (l1) 讀取權重表與丟包統計，以及 Target Leaf (l2) 讀取遙測資料
+        # l1 for weights/drop stats, l2 for telemetry
         self.api_telemetry = SimpleSwitchThriftAPI(self.topo.get_thrift_port(TARGET_LEAF))
         self.api_control = SimpleSwitchThriftAPI(self.topo.get_thrift_port(CONTROL_LEAF))
-        
-        # 載入模型
+
+        # load models
         self.models = {}
         for k, v in MODELS.items():
             if os.path.exists(v):
                 self.models[k] = joblib.load(v)
-                print(f"   - 載入模型 {v} 成功")
+                print(f"   - loaded model {v}")
             else:
-                print(f"   - 警告: 找不到模型檔案 {v}")
+                print(f"   - warning: model not found {v}")
 
         self.prev_bytes = {p: 0 for p in PORTS}
         self.prev_l1_enq = {p: 0 for p in PORTS}
         self.prev_l2_ingress = {p: 0 for p in PORTS}
-        self.prev_state = None # 用於計算 Trend
-        
-        # 用於追蹤權重變化與 Rehash 事件
+        self.prev_state = None # for trend calc
+
+        # weight-change / rehash tracking
         self.last_rehash_time = time.time()
         self.is_rehash_event = 0
         self.prev_weights = {p: 1 for p in PORTS}
@@ -87,7 +84,7 @@ class Realtime1sPredictor:
         self.init_baseline()
 
     def init_baseline(self):
-        """讀取初始 Counter 基準"""
+        """Read initial counter baselines."""
         for p in PORTS:
             try:
                 self.prev_bytes[p] = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
@@ -96,8 +93,8 @@ class Realtime1sPredictor:
             except: pass
 
     def get_current_weights(self):
-        """從 L1 交換機的 Action Profile 讀取真實權重配置"""
-        weights = {p: 1 for p in PORTS} # 預設權重
+        """Read live weights from l1's action profile."""
+        weights = {p: 1 for p in PORTS} # default
         try:
             import socket
             entries = self.api_control.client.bm_mt_get_entries(0, "MyIngress.w_ecmp_table")
@@ -137,7 +134,7 @@ class Realtime1sPredictor:
         return weights
 
     def collect_1s_data(self):
-        """採集 1 秒的數據點與硬體真實數據"""
+        """Collect one 1s data point + hardware ground truth."""
         start_t = time.time()
         time.sleep(1.0)
         dt = time.time() - start_t
@@ -145,7 +142,7 @@ class Realtime1sPredictor:
         current_time = time.time()
         row = {}
         
-        # 1. 獲取權重並判斷 Rehash 事件
+        # 1. read weights, detect rehash event
         weights = self.get_current_weights()
         if weights != self.prev_weights:
             self.is_rehash_event = 1
@@ -155,11 +152,11 @@ class Realtime1sPredictor:
         total_weight = sum(weights.values())
         if total_weight == 0: total_weight = 1
         
-        # 2. 基礎遙測
+        # 2. telemetry
         qdepths = []
         mbps_list = []
-        
-        # 用於記錄真實 Hardware Latency 與 Loss (Ground Truth)
+
+        # hardware ground-truth latency / loss
         max_hw_latency = 0
         total_delta_enq = 0
         total_drops = 0
@@ -184,11 +181,11 @@ class Realtime1sPredictor:
             qdepths.append(q)
             mbps_list.append(mbps)
             
-            # 計算真實最大硬體延遲
+            # max hardware latency
             if raw_acc_q_delay > max_hw_latency:
                 max_hw_latency = raw_acc_q_delay
-                
-            # 計算硬體真實丟包 (l1_enq - l2_ingress)
+
+            # hardware drops (l1_enq - l2_ingress)
             try:
                 l1_enq_pkts = self.api_control.counter_read('cnt_enq', p)[0]
                 l2_ingress_pkts = self.api_telemetry.counter_read('cnt_ingress', p)[0]
@@ -205,13 +202,12 @@ class Realtime1sPredictor:
                     total_drops += drops
             except: pass
 
-        # 寫入硬體真實數值供終端機顯示
         row['Real_HW_Latency_ms'] = max_hw_latency / 1000.0
         row['Real_HW_Loss_Percent'] = (total_drops / total_delta_enq * 100) if total_delta_enq > 0 else 0.0
 
-        # 3. 衍生特徵計算
+        # 3. derived features
         row["Is_Rehash_Event"] = self.is_rehash_event
-        self.is_rehash_event = 0 # 觸發後歸零
+        self.is_rehash_event = 0 # reset after firing
         row["Time_Since_Last_Rehash_s"] = current_time - self.last_rehash_time
         row["Rehash_Impact"] = math.exp(-row["Time_Since_Last_Rehash_s"])
         
@@ -239,7 +235,7 @@ class Realtime1sPredictor:
         row["Q_Danger_Flag"] = 1 if row["Max_QDepth"] > 40 else 0
         row["Q_Danger_Count"] = sum(1 for q in qdepths if q > 40)
         
-        # 群組不平衡
+        # group imbalance
         load_a = sum(row[f"src1_port{p}_mbps"] for p in [2, 3, 4, 5])
         weight_a = sum(row[f"Weight_Port{p}"] for p in [2, 3, 4, 5])
         load_b = sum(row[f"src1_port{p}_mbps"] for p in [6, 7, 8, 9])
@@ -250,7 +246,7 @@ class Realtime1sPredictor:
         row["Overflow_Intensity"] = row["Over_Capacity_Sum"] * row["Max_Q_Ratio"]
         row["Queue_Full_And_Over_Cap"] = row["Over_Capacity_Sum"] * row["Q_Danger_Flag"]
 
-        # 4. 時序趨勢 (Trend)
+        # 4. temporal trends
         if self.prev_state is None:
             for p in PORTS:
                 row[f"QDepth_Trend_P{p}"] = 0
@@ -274,7 +270,7 @@ class Realtime1sPredictor:
             while True:
                 data_row = self.collect_1s_data()
                 
-                # 防呆：確保模型只吃到它認得的特徵，避免 Crash
+                # only feed features the model knows
                 X = pd.DataFrame([[data_row.get(f, 0) for f in FEATURE_NAMES]], columns=FEATURE_NAMES)
                 
                 preds = {}

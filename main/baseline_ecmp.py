@@ -1,14 +1,8 @@
 """
-baseline_ecmp.py — 純 ECMP 基準 (等權，無 group，無 DRILL，無 ML)
-
-每個 spine 視為獨立的單埠 component、權重相同 —— 5-tuple 均勻雜湊到 8 個 spine。
-用來與 W-ECMP+DRILL+ML 控制器比較。
-
-用法 (需先 sudo p4run；本腳本取代 all_controller 的設定)：
-    python3 baseline_ecmp.py [量測秒數]
-
-預設量測 60 秒，輸出沿用既有 plot_1s_metrics CSV 格式。
-流量請另開終端機用 traffic.py 產生 (本腳本不管理流量)。
+baseline_ecmp.py — pure ECMP baseline (equal weight, no group, no DRILL, no ML).
+8 single-port components, equal weight -> 5-tuple hashed uniformly across spines.
+Usage (run sudo p4run first; this replaces all_controller's config):
+    python3 baseline_ecmp.py [duration_s]   (default 60; traffic via traffic.py separately)
 """
 
 import sys

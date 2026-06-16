@@ -12,16 +12,13 @@ import re
 import numpy as np
 from datetime import datetime
 
-# 導入現有的工具
 from all_controller import TopologyAnalyzer
 from p4utils.utils.helper import load_topo
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - [數據大腦V2] %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [DataBrainV2] %(message)s')
 
-# ==========================================
-# 配置與路徑
-# ==========================================
+# ---- config & paths ----
 MASTER_CSV = "research_results/data/datasets/rolling_training_dataset.csv"
 RAW_DIR = "raw_telemetry_v2"
 CONTROL_LEAF = "l1"
@@ -38,7 +35,7 @@ class RollingDataBrain:
         os.makedirs(os.path.dirname(MASTER_CSV), exist_ok=True)
         os.makedirs(RAW_DIR, exist_ok=True)
         
-        # 預先載入拓樸與分析器
+        # preload topology + analyzer
         with open('p4app.json', 'r') as f:
             self.p4app_data = json.load(f)
         self.topo = load_topo("topology.json")
@@ -54,14 +51,13 @@ class RollingDataBrain:
         
         self.prev_l1_enq = {p: 0 for p in PORTS}
         self.prev_l2_ingress = {p: 0 for p in PORTS}
-        
-        # 用於平滑化的變數 (EMA)
+
+        # EMA smoothing of delay (alpha 0.7 = 70% newest reading)
         self.smoothed_acc_delay = {p: 0.0 for p in PORTS}
         self.smoothed_max_delay = {p: 0.0 for p in PORTS}
-        # 平滑係數：0.7 代表最新讀數佔 70%，歷史佔 30%
         self.delay_alpha = 0.7
-        
-        # 新增：用於時間特徵追蹤
+
+        # time-feature tracking
         self.traffic_start_time = 0.0
         self.last_rehash_time = 0.0
         self.is_rehash_this_second = 0
@@ -71,7 +67,7 @@ class RollingDataBrain:
         try:
             return SimpleSwitchThriftAPI(thrift_port)
         except Exception as e:
-            logging.error(f"無法連線至 {switch_name}: {e}")
+            logging.error(f"cannot connect {switch_name}: {e}")
             return None
 
     def reset_switch_stats(self):
@@ -81,19 +77,18 @@ class RollingDataBrain:
         for p in PORTS:
             reg_idx = SRC_ID * 16 + p
             try:
-                # 抹除佇列極值暫存器與延遲暫存器
+                # clear queue-peak + delay registers
                 api_target.register_write('path_max_queue_depth_reg', reg_idx, 0)
                 api_target.register_write('path_max_q_delay_reg', reg_idx, 0)
                 api_target.register_write('path_acc_q_delay_reg', reg_idx, 0)
-                
-                # 預讀 Byte Counter 作為基準
+
+                # prime byte counter baseline
                 self.prev_bytes[p] = api_target.counter_read('port_bytes_counter', p)[0]
-                
-                # 初始化平滑變數
+
                 self.smoothed_acc_delay[p] = 0.0
                 self.smoothed_max_delay[p] = 0.0
             except Exception as e:
-                logging.debug(f"Reset 失敗 (Port {p}): {e}")
+                logging.debug(f"reset failed (Port {p}): {e}")
 
     def apply_weights(self, weights_list):
         api_ctrl = self._get_api(CONTROL_LEAF)
@@ -127,25 +122,25 @@ class RollingDataBrain:
             subprocess.run(['simple_switch_CLI', '--thrift-port', str(thrift_port)], 
                            input="\n".join(cli_cmds) + "\n", text=True, capture_output=True)
             
-            # 檢查權重是否真的有改變
+            # detect whether weights actually changed
             weights_changed = False
             for p in PORTS:
                 if self.current_weights.get(p) != port_weights_dict.get(p, 1):
                     weights_changed = True
                 self.current_weights[p] = port_weights_dict.get(p, 1)
-            
+
             if weights_changed:
                 self.last_rehash_time = time.time()
                 self.is_rehash_this_second = 1
-                logging.info(f"權重發生變更 (Rehash): {weights_list}")
-            
+                logging.info(f"weights changed (rehash): {weights_list}")
+
             return port_weights_dict
         except Exception as e:
-            logging.error(f"下發權重出錯: {e}")
+            logging.error(f"weight push failed: {e}")
             return {}
 
     def collect_and_save(self, duration_sec):
-        """核心採樣迴圈 (每 1s 一筆數據)"""
+        """Core sampling loop (one row per 1s)."""
         start_time = time.time()
         samples = []
         while time.time() - start_time < duration_sec:
@@ -172,31 +167,31 @@ class RollingDataBrain:
                 'Is_Rehash_Event': self.is_rehash_this_second
             }
             
-            # 記錄完事件後將 Flag 歸零
+            # reset flag after recording
             self.is_rehash_this_second = 0
-            
+
             max_overall_delay = 0
             total_delta_enq = 0
             total_drops = 0
-            
-            # 計算權重總和，以轉換為比例 (Probability)
+
+            # weight sum -> normalize to probability
             total_weight = sum(self.current_weights.values())
             if total_weight == 0: total_weight = 1
             
             for p in PORTS:
                 reg_idx = SRC_ID * 16 + p
                 try:
-                    # 讀取佇列深度與延遲
+                    # read queue depth + delay
                     q = api_target.register_read('path_max_queue_depth_reg', reg_idx)
                     raw_max_q_delay = api_target.register_read('path_max_q_delay_reg', reg_idx)
                     raw_acc_q_delay = api_target.register_read('path_acc_q_delay_reg', reg_idx)
-                    
-                    # Reset-on-read
+
+                    # reset-on-read
                     api_target.register_write('path_max_queue_depth_reg', reg_idx, 0)
                     api_target.register_write('path_max_q_delay_reg', reg_idx, 0)
                     api_target.register_write('path_acc_q_delay_reg', reg_idx, 0)
-                    
-                    # === 套用輕度 EMA 平滑化 ===
+
+                    # light EMA smoothing
                     if self.smoothed_acc_delay[p] == 0 and raw_acc_q_delay > 0:
                         self.smoothed_acc_delay[p] = raw_acc_q_delay
                         self.smoothed_max_delay[p] = raw_max_q_delay
@@ -204,18 +199,17 @@ class RollingDataBrain:
                         self.smoothed_acc_delay[p] = (self.delay_alpha * raw_acc_q_delay) + ((1 - self.delay_alpha) * self.smoothed_acc_delay[p])
                         self.smoothed_max_delay[p] = (self.delay_alpha * raw_max_q_delay) + ((1 - self.delay_alpha) * self.smoothed_max_delay[p])
                     
-                    # 記錄平滑後的數值
                     row[f'src1_port{p}_qdepth'] = q
                     row[f'src1_port{p}_max_q_delay_us'] = round(self.smoothed_max_delay[p], 2)
                     row[f'src1_port{p}_acc_q_delay_us'] = round(self.smoothed_acc_delay[p], 2)
-                    
-                    # 計算吞吐量 (Bytes -> Mbps)
+
+                    # throughput (bytes -> Mbps)
                     cnt_bytes = api_target.counter_read('port_bytes_counter', p)[0]
                     mbps = ((cnt_bytes - self.prev_bytes[p]) * 8) / (dt * 1_000_000)
                     row[f'src1_port{p}_mbps'] = round(mbps, 3)
                     self.prev_bytes[p] = cnt_bytes
-                    
-                    # 計算丟包率 (l1_enq - l2_ingress)
+
+                    # drop rate (l1_enq - l2_ingress)
                     l1_enq_pkts = api_ctrl.counter_read('cnt_enq', p)[0]
                     l2_ingress_pkts = api_target.counter_read('cnt_ingress', p)[0]
                     
@@ -247,23 +241,23 @@ class RollingDataBrain:
                     row[f'src1_port{p}_mbps'] = 0
                     row[f'src1_port{p}_congestion_drop_rate_percent'] = 0.0
                     
-                # 正規化權重，轉換為比例 (0.0 ~ 1.0)
+                # normalize weight to a fraction (0..1)
                 row[f'Weight_Port{p}'] = round(self.current_weights[p] / total_weight, 4)
-            
-            # 以全網最大累積延遲作為總體 Latency 標籤（可選）
+
+            # latency label = network-wide max accumulated delay
             row['Label_Max_Path_Delay_ms'] = max_overall_delay / 1000.0
-            
-            # 計算全網總丟包率
+
+            # network-wide total drop rate
             total_drop_rate = 0.0
             if total_delta_enq > 0:
                 total_drop_rate = round((total_drops / total_delta_enq) * 100, 2)
             row['Label_Total_Drop_Rate_Percent'] = total_drop_rate
             
             samples.append(row)
-            sys.stdout.write(f"\r  採集中... {len(samples)}/{duration_sec}s | Max Path Delay: {row['Label_Max_Path_Delay_ms']:.2f} ms | Total Loss: {row['Label_Total_Drop_Rate_Percent']}%")
+            sys.stdout.write(f"\r  collecting... {len(samples)}/{duration_sec}s | Max Path Delay: {row['Label_Max_Path_Delay_ms']:.2f} ms | Total Loss: {row['Label_Total_Drop_Rate_Percent']}%")
             sys.stdout.flush()
 
-        # 存入 Master CSV
+        # append to master CSV
         df = pd.DataFrame(samples)
         df.to_csv(MASTER_CSV, mode='a', index=False, header=not os.path.exists(MASTER_CSV))
 
@@ -271,8 +265,8 @@ class RollingDataBrain:
         _ , rules = self.analyzer.get_ecmp_weights_and_rules(CONTROL_LEAF, TARGET_LEAF)
         num_comp = len(rules) if len(rules) > 0 else 1
         weights = [random.randint(1, 10) for _ in range(num_comp)]
-        
-        # 依照 0.2 : 0.3 : 0.5 的比例挑選模式
+
+        # pick mode 0.2 : 0.3 : 0.5
         idx = iteration_id % 10
         if idx < 2:
             mode = "--static"
@@ -280,21 +274,21 @@ class RollingDataBrain:
             mode = "--dynamic"
         else:
             mode = "--elmice"
-        
-        # 依照使用者要求，加入全局流量縮放比例，並有 70% 機率維持在 3.12M 附近
+
+        # global load scale; 70% near nominal 3.12M
         r = random.random()
         if r < 0.70:
-            scale = random.uniform(0.9, 1.1)  # 70% 常態負載 (約 3.12M)
+            scale = random.uniform(0.9, 1.1)  # 70% normal (~3.12M)
         elif r < 0.85:
-            scale = random.uniform(0.4, 0.8)  # 15% 輕負載
+            scale = random.uniform(0.4, 0.8)  # 15% light
         else:
-            scale = random.uniform(1.2, 1.6)  # 15% 重負載
+            scale = random.uniform(1.2, 1.6)  # 15% heavy
 
         avg_load = (3.12 * scale) / 18
         return weights, mode, f"{avg_load:.3f}M", 18, scale
 
     def run_experiment(self, exp_id):
-        print(f"\n=== 開始長連線實驗 #{exp_id} ===")
+        print(f"\n=== starting long-run experiment #{exp_id} ===")
         
         self.traffic_start_time = time.time()
         self.last_rehash_time = time.time()
@@ -310,7 +304,7 @@ class RollingDataBrain:
         traffic_cmd = ["sudo", "python3", "traffic.py", mode, "--no-monitor", "--scale", f"{scale:.2f}", str(duration_sec)]
         p_traffic = subprocess.Popen(traffic_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        print(f"  [流量] traffic.py {mode} | INT 遙測中")
+        print(f"  [traffic] traffic.py {mode} | INT telemetry running")
         
         for i in range(4):
             if i > 0:
@@ -330,7 +324,7 @@ def main():
     subprocess.run(["sudo", "pkill", "-f", "iperf3"], stderr=subprocess.DEVNULL)
     if os.path.exists(SERVER_LOG): os.remove(SERVER_LOG)
     
-    # 背景流量伺服器 (Port 5201)
+    # background iperf3 server (port 5201)
     subprocess.Popen(["mx", "h2", "iperf3", "-s", "-i", "1", "-p", str(IPERF_PORT), "--logfile", SERVER_LOG])
     time.sleep(2)
 
@@ -340,7 +334,7 @@ def main():
         for i in range(1, 301):
             brain.run_experiment(i)
     except KeyboardInterrupt:
-        print("\n中斷。")
+        print("\ninterrupted.")
     finally:
         brain.stop_event.set()
         subprocess.run(["sudo", "pkill", "-f", "iperf3"], stderr=subprocess.DEVNULL)

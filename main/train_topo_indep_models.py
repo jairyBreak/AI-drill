@@ -10,9 +10,7 @@ from sklearn.metrics import r2_score, mean_absolute_error
 
 from topo_independent_helper import transform_to_topo_independent
 
-# ==========================================
-# 配置與路徑
-# ==========================================
+# ---- config & paths ----
 CSV_4PORT = "bruh/rolling_training_dataset_1.csv"
 CSV_8PORT = "research_results/data/datasets/rolling_training_dataset.csv"
 
@@ -20,16 +18,16 @@ CAPACITY_4PORT = {2: 0.8, 3: 0.8, 4: 1.2, 5: 1.2}
 CAPACITY_8PORT = {2: 0.48, 3: 0.56, 4: 0.64, 5: 0.72, 6: 0.80, 7: 0.88, 8: 0.96, 9: 1.04}
 
 BEST_PARAMS = dict(
-    n_estimators=100,       # 減少樹的數量以提升即時推論速度 (1s 尺度需要更快的推論)
-    max_depth=15,           # 限制深度以防止過擬合高頻雜訊
-    min_samples_leaf=4,     # 增加葉節點最小樣本數，提升對 1s 雜訊的魯棒性
-    max_features='sqrt',    # 使用 sqrt 能增加樹的多樣性，減少過擬合
+    n_estimators=100,       # few trees for fast inference
+    max_depth=15,           # cap depth to avoid overfitting noise
+    min_samples_leaf=4,     # robustness to 1s noise
+    max_features='sqrt',    # tree diversity / less overfit
     bootstrap=True,
     n_jobs=-1,
     random_state=42
 )
 
-# 定義特徵清單 (與 helper 中的特徵完全一致)
+# feature list (matches helper)
 SELECTED_FEATURES = [
     "Is_Rehash_Event", "Time_Since_Last_Rehash_s", "Rehash_Impact",
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance", 
@@ -126,10 +124,10 @@ def train_models():
     
     all_dfs = []
     
-    # 1. 跳過 4-Port 資料集 (依據使用者要求只訓練 8-port)
+    # 1. skip 4-port dataset (train 8-port only)
     print("跳過 4-port 資料集，只使用 8-port 資料集...")
         
-    # 2. 處理 8-Port 資料集 (當前實驗產生的)
+    # 2. process 8-port dataset
     if os.path.exists(CSV_8PORT):
         print(f"載入 8-port 當前資料集: {CSV_8PORT}")
         df_8_32, df_8_56 = load_and_split_csv(CSV_8PORT)
@@ -150,24 +148,24 @@ def train_models():
         print("錯誤: 沒有任何有效的資料可以進行訓練。")
         return
         
-    # 合併所有拓樸無關轉換後的 DataFrame
+    # merge all topo-independent frames
     df = pd.concat(all_dfs, ignore_index=True)
     print(f"合併完成！總樣本數: {len(df)}")
     
-    # 數據清洗：保留極端大象流延遲，只剔除小於 0 的無效值
+    # clean: keep extreme delays, drop only < 0
     original_len = len(df)
-    # df = df[df["Label_Max_Path_Delay_ms"] <= 3000.0]  # 放寬限制，讓模型學習極端塞車
+    # df = df[df["Label_Max_Path_Delay_ms"] <= 3000.0]  # relaxed cap to learn extreme congestion
     df = df[df["Label_Max_Path_Delay_ms"] >= 0]
     print(f"數據清洗: 剔除了 {original_len - len(df)} 筆無效樣本 (保留了所有極端高延遲)")
     
-    # 確保特徵都在
+    # ensure features present
     available_features = [f for f in SELECTED_FEATURES if f in df.columns]
     missing_features = [f for f in SELECTED_FEATURES if f not in df.columns]
     print(f"使用特徵數: {len(available_features)}")
     if missing_features:
         print(f"缺失特徵 (將使用預設值填充或排除): {missing_features}")
         
-    # 訓練目標
+    # training targets
     targets = [
         ("Label_Max_Path_Delay_ms", "latency_1s"),
         ("Label_Total_Drop_Rate_Percent", "loss_1s")
@@ -176,11 +174,11 @@ def train_models():
     for label_col, name in targets:
         print(f"\n--- 正在訓練 {name} 拓樸無關模型 ---")
         
-        # 過濾無效標籤
+        # filter invalid labels
         subset = df[df[label_col] != -1.0].copy()
         X = subset[available_features]
         
-        # 根據目標決定是否使用 log1p 變換
+        # log1p for latency only
         use_log = "latency" in name
         if use_log:
             y_target = np.log1p(subset[label_col])
@@ -197,11 +195,11 @@ def train_models():
             model = RandomForestRegressor(**BEST_PARAMS)
             model.fit(X_tr, y_target_tr)
             
-            # 預測並還原
+            # predict and invert
             preds = model.predict(X_te)
             if use_log:
                 preds_orig = np.expm1(preds)
-                r2_val = r2_score(y_target.iloc[test_idx], preds) # 延遲使用log1p空間的R2
+                r2_val = r2_score(y_target.iloc[test_idx], preds) # latency R2 in log1p space
             else:
                 preds_orig = preds
                 r2_val = r2_score(y_te_raw, preds)
@@ -213,25 +211,25 @@ def train_models():
         metric_name = "R2(log)" if use_log else "R2(raw)"
         print(f"[{name:12}] {metric_name}: {np.mean(r2_list):.4f} | MAE: {np.mean(mae_list):.4f} {unit}")
         
-        # 訓練最終模型
+        # train final model
         final_model = RandomForestRegressor(**BEST_PARAMS)
         final_model.fit(X, y_target)
         joblib.dump(final_model, f"rf_model_{name}.pkl")
         print(f"模型已儲存至: rf_model_{name}.pkl")
         
-        # 顯示特徵重要性
+        # feature importances
         importances = final_model.feature_importances_
         indices = np.argsort(importances)[::-1]
         print(f"Top 5 特徵重要性:")
         for i in range(5):
             print(f"  {i+1}. {available_features[indices[i]]:<35} ({importances[indices[i]]:.4f})")
             
-    # 異常分類模型 (以丟包率 > 0.1% 作為異常)
+    # anomaly classifier (loss > 0.1%)
     print("\n--- 正在訓練 anomaly_1s 拓樸無關分類模型 ---")
     X = df[available_features]
     y = (df["Label_Total_Drop_Rate_Percent"] > 0.1).astype(int)
     
-    # 5-fold 交叉驗證評估分類指標
+    # 5-fold CV for classifier metrics
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
     cv_clf = KFold(n_splits=5, shuffle=True, random_state=42)
     acc_list, prec_list, rec_list, f1_list = [], [], [], []

@@ -2,7 +2,7 @@ import pandas as pd
 
 MASTER_CSV  = "training_dataset_master.csv"
 OUT_CSV     = "training_dataset_v2.csv"
-VALID_ROWS  = 1068   # 後 1500 筆是 iperf3 掉線廢資料，只保留前 1068 筆
+VALID_ROWS  = 1068   # last 1500 rows are iperf3-disconnect garbage; keep first 1068
 PORTS       = [2, 3, 4, 5]
 
 

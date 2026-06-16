@@ -135,7 +135,7 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
-    // 新增一個 Table，用來根據不同的 Group ID，給予不同的 DRILL 參數
+    // per-component DRILL params (keyed by group id)
     table drill_params_table {
         key = {
             meta.ecmp_group_id: exact;
@@ -192,17 +192,17 @@ apply {
         if (hdr.ipv4.isValid()) {
             switch (ipv4_lpm.apply().action_run) {
                 set_w_ecmp: {
-                    // Selector 依 5-tuple 抽出 Component ID
+                    // selector hashes 5-tuple -> component id
                     if (w_ecmp_table.apply().hit) {
-                        //  Component ID 給予對應的 DRILL 參數
+                        // component id -> DRILL params
                         if (drill_params_table.apply().hit) {
-                            // 將 DRILL 算出的 best_port 轉換為實體 Port 與 MAC
+                            // DRILL best_port -> physical port + MAC
                             ecmp_group_to_nhop.apply();
                         }
                     }
                 }
                 set_nhop: {
-                    // 已經在 set_nhop 寫好 egress_specｓ
+                    // egress_spec already set in set_nhop
                 }
             }
         }

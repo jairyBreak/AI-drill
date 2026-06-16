@@ -36,7 +36,7 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
         # p99 queue depth
         feats[f"qdepth_p99_port{p}"] = float(np.percentile(q, 99))
         
-        # 新增: 平均隊列深度 (更穩定)
+        # mean queue depth (more stable)
         q_mean = float(np.mean(q))
         feats[f"qdepth_mean_port{p}"] = q_mean
         means_qdepth.append(q_mean)
@@ -84,7 +84,7 @@ def temporal_features_for_experiment(exp_path: str) -> dict:
     p99_vals = [feats.get(f"qdepth_p99_port{p}", np.nan) for p in PORTS]
     feats["max_qdepth_p99"] = float(np.nanmax(p99_vals)) if p99_vals else np.nan
     feats["total_qdepth_p99"] = float(np.nansum(p99_vals))
-    feats["total_qdepth_mean"] = float(np.nansum(means_qdepth)) # 新增總平均
+    feats["total_qdepth_mean"] = float(np.nansum(means_qdepth)) # total mean
     feats["qdepth_oscillation"] = float(np.mean(cvs_qdepth)) if cvs_qdepth else np.nan
     feats["qdepth_fft_max_all"] = float(np.max(fft_max_q)) if fft_max_q else 0.0
 

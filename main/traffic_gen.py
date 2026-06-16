@@ -4,16 +4,12 @@ import sys
 import random
 
 def send_traffic(target_ip, target_port, bandwidth_mbps, duration_sec):
-    # 建立 UDP Socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-    # 每個封包的大小 (1400 bytes)
-    PAYLOAD_SIZE = 1400
+
+    PAYLOAD_SIZE = 1400  # bytes per packet
     payload = b'X' * PAYLOAD_SIZE
-    
-    # 計算發包頻率
-    # bits_per_second = bandwidth_mbps * 1,000,000
-    # packets_per_second = bits_per_second / (PAYLOAD_SIZE * 8)
+
+    # packets per second from target bandwidth
     pps = (bandwidth_mbps * 1_000_000) / (PAYLOAD_SIZE * 8)
     inter_packet_gap = 1.0 / pps
     
@@ -30,7 +26,7 @@ def send_traffic(target_ip, target_port, bandwidth_mbps, duration_sec):
             sock.sendto(payload, (target_ip, target_port))
             total_packets += 1
             
-            # 精確控制時間間隔
+            # pace the send rate
             time.sleep(inter_packet_gap)
             
             if total_packets % 100 == 0:
@@ -51,7 +47,6 @@ if __name__ == "__main__":
     bw = float(sys.argv[2])
     duration = int(sys.argv[3]) if len(sys.argv) > 3 else 10
     
-    # 隨機選擇一個 Port 或固定使用 5001
     port = 5001
     
     send_traffic(ip, port, bw, duration)

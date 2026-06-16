@@ -11,7 +11,7 @@ class EcmpController:
         self.topo = load_topo('topology.json') 
         self.thrift_port = self.topo.get_thrift_port(switch_name)
 
-        # 建立 Thrift 連線
+        # open Thrift connection
         self.api = SimpleSwitchThriftAPI(self.thrift_port)
         print(f"[{self.switch_name}] 已成功連線至 Thrift API (Port: {self.thrift_port})")
 
@@ -22,19 +22,16 @@ class EcmpController:
         table_name = "w_ecmp_table"
         action_name = "assign_component"
 
-    # 1. 建立 Group，取得 group handle (int)
-    
+    # 1. create group, get handle
+
         grp_handle = self.api.act_prof_create_group(selector_name)
 
-    # 2. 建立 Component 1 的 Member 並加入 Group
+    # 2. create component-1 members, add to group
         for _ in range(weight_c1):
-        # 參考: act_prof_create_member(act_prof_name, action_name, action_params=[])
             mbr_handle = self.api.act_prof_create_member(selector_name, action_name, ["1"])
-        
-        # 參考: act_prof_add_member_to_group(act_prof_name, mbr_handle, grp_handle)
             self.api.act_prof_add_member_to_group(selector_name, mbr_handle, grp_handle)
 
-    # 3. 建立 Component 2 的 Member 並加入 Group
+    # 3. create component-2 members, add to group
         for _ in range(weight_c2):
             mbr_handle = self.api.act_prof_create_member(selector_name, action_name, ["2"])
             self.api.act_prof_add_member_to_group(selector_name, mbr_handle, grp_handle)
@@ -48,7 +45,6 @@ class EcmpController:
             print(f"CLI 執行失敗: {e.stderr.decode()}")
 
 if __name__ == "__main__":
-    # 初始化控制器
     ctrl = EcmpController("l1")
-    # 測試：動態下發 1:2 的權重給 10.0.2.2
+    # test: push 1:2 weights to 10.0.2.2
     ctrl.set_w_ecmp_weights(target_ip="10.0.2.2", weight_c1=1, weight_c2=2)

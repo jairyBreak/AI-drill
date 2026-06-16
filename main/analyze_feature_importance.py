@@ -5,7 +5,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 
-# 設定與訓練腳本一致的特徵清單
+# feature list matching the training script
 SELECTED_FEATURES = [
     "Total_Util_Sum", "Max_Util_Diff", "Group_Imbalance",
     "Norm_Load_P2", "Norm_Load_P3", "Norm_Load_P4", "Norm_Load_P5",
@@ -48,7 +48,7 @@ def run_analysis():
     df = pd.read_csv(CSV_PATH)
     df = add_ultimate_features(df)
     
-    # 使用當前配置訓練一個臨時模型來分析 (100 棵樹即可)
+    # train a quick model (100 trees) for analysis
     from sklearn.ensemble import RandomForestRegressor
     
     label_col = "Label_Latency_ms"
@@ -72,7 +72,7 @@ def run_analysis():
         print(res)
         report.append(res)
     
-    # 繪圖
+    # plot
     plt.figure(figsize=(12, 8))
     plt.title("Ultimate Feature Importance (Latency Model)")
     plt.bar(range(X.shape[1]), importances[indices], color='gold')

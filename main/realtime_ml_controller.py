@@ -13,10 +13,9 @@ import collections
 from datetime import datetime
 from contextlib import redirect_stdout, redirect_stderr
 
-# 隱藏所有警告
 warnings.filterwarnings("ignore")
 
-# 載入 P4-Utils
+# load P4-Utils
 P4_UTILS_PATH = os.environ.get('P4_UTILS_PATH', '/home/p4/p4-utils')
 if P4_UTILS_PATH not in sys.path:
     sys.path.append(P4_UTILS_PATH)
@@ -26,53 +25,39 @@ from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 from all_controller import TopologyAnalyzer, install_ecmp_drill_rules
 from topo_independent_helper import transform_to_topo_independent
 
-# 設定日誌 (只顯示 ERROR 以上)
 logging.basicConfig(level=logging.ERROR)
 
-# ==========================================
-# 配置參數
-# ==========================================
+# ---- config ----
 CONTROL_LEAF = "l1"
 TARGET_LEAF = "l2"
 TARGET_IP = "10.0.2.2"
 SRC_ADD = 1
 PORTS = list(range(2, 10))
-# 8 個不同頻寬的非對稱拓樸 (p4app bw 0.6~1.3，rate_limiter ×0.8 後的有效容量)
+# 8 distinct-bw asymmetric topology (p4app bw 0.6~1.3, x0.8 effective)
 CAPACITY = {2: 0.48, 3: 0.56, 4: 0.64, 5: 0.72,
             6: 0.80, 7: 0.88, 8: 0.96, 9: 1.04}
 
-# ---- 權重控制總開關 ----
-# True  -> 完整 W-ECMP+DRILL+ML：啟動裝 anchor，之後 control_step 依 (反應式/ML) 證據動態調權。
-# False -> 純靜態 W-ECMP+DRILL：啟動時依各 class 頻寬容量裝好 anchor 權重 [3,4,5,6]，之後
-#          「權重永不變動」，完全不參考 ML 預測或任何指標；class 內仍由 dataplane DRILL 逐封包
-#          選最短佇列。等同 W-ECMP+DRILL baseline，但仍走本控制器的量測/記錄路徑 (相同 CSV
-#          欄位，供 plot_result.py 公平比較)。
+# True = W-ECMP+DRILL+ML (dynamic weights); False = static W-ECMP+DRILL anchor (weights never change)
 ML_WEIGHT_ENABLE = True
 
-# ---- 控制器穩定性參數 (大象/老鼠流量；錨定容量比例 + 有界修正) ----
-# 設計：流量是大象 (0.24~0.40M) + 老鼠 (0.06~0.16M) 混合，事先不知誰是大象。
-# 大象落到某個容量 class 會把該 class 的佇列/利用率撐高 (自我暴露)，控制器就「降低該
-# class 的權重」-> W-ECMP 雜湊較少把新的 (多為老鼠) 流導進大象的 class -> 它們改走較涼的
-# class。class 內部由 dataplane DRILL 逐封包把老鼠導到非大象那個埠 (控制器不管)。目標是
-# 「把熱 class 的進流量 shed 到各 class load/cap 相近，然後凍結」，不是精確等利用率。
-LATENCY_THRESHOLD_MS = 200.0   # 模型示警門檻 (假設模型已重訓、預測可靠)
+# Controller stability params (elephant/mice; capacity anchor + bounded correction)
+LATENCY_THRESHOLD_MS = 200.0   # model alarm threshold
 LOSS_THRESHOLD_PCT   = 2.0
-COOLDOWN_SEC         = 6        # 兩次 rehash 的最小間隔 (每次權重變動 = 全流量重雜湊)
-SETTLE_SEC           = 2        # rehash 後的量測黑窗：過渡態不可信，不在此期間決策
-PERSIST_TICKS        = 2        # 不平衡需連續成立幾拍才動手 (濾掉過渡/雜訊；大象的熱會持續)
-RELAX_TICKS          = 6        # 被 shed 的 class 連續轉冷這麼多拍 (=大象已離開的證據) -> 跳回 anchor
-IMBALANCE_TOL        = 0.15     # 不動作容忍帶：介於老鼠(~0.13) 與大象(~0.21+) 的利用率隆起之間
-WEIGHT_BOUND         = 2        # 權重相對 anchor 的最大偏移 (小整數 anchor 下避免過大修正與 rehash churn)
-CORRECTION_GAIN      = 0.5      # 比例修正增益：熱 class 依超出量降權、冷 class 升權
-UTIL_SAT             = 0.90     # 「該 class 逼近自身上限」的絕對門檻 (真實頻寬利用率)
-QDEPTH_HOT           = 32       # 視為被大象塞住的 max 佇列深度 (rate_limiter 設佇列上限 64 -> 半滿)
-RATE_LIMIT_SCALE     = 0.8      # rate_limiter.py 用 set_queue_rate(0.8x p4app bw) -> 有效容量 = 0.8x 連結頻寬
-Q_WEIGHT             = 0.5      # 佇列壓力併入 class 熱度訊號的權重 (大象常先以佇列堆積暴露，早於利用率飽和)
+COOLDOWN_SEC         = 6        # min spacing between rehashes
+SETTLE_SEC           = 2        # post-rehash measurement blackout
+PERSIST_TICKS        = 2        # ticks imbalance must persist before acting
+RELAX_TICKS          = 6        # ticks a shed class stays cold before relaxing to anchor
+IMBALANCE_TOL        = 0.15     # no-action band (between mouse ~0.13 and elephant ~0.21+)
+WEIGHT_BOUND         = 2        # max weight deviation from anchor
+CORRECTION_GAIN      = 0.5      # proportional shed/boost gain
+UTIL_SAT             = 0.90     # absolute "class near its own limit" threshold
+QDEPTH_HOT           = 32       # queue depth marking a class congested (cap is 64)
+RATE_LIMIT_SCALE     = 0.8      # effective cap = link bw x this (matches rate_limiter.py)
+Q_WEIGHT             = 0.5      # weight of queue pressure in the hotness signal
 WEIGHT_MIN           = 1
 WEIGHT_MAX           = 8
 
-# 結果 CSV (與 baseline / plot_1s_metrics 相同欄位，供 plot_result.py 三方比較)
-# 動態調權 vs 靜態 (固定容量比例權重) 寫不同檔名，避免互相覆蓋
+# Result CSV (same columns as baselines, for plot_result.py); dynamic vs static use different names
 OUTPUT_CSV = ("research_results/data/validation/comparison_ml.csv" if ML_WEIGHT_ENABLE
               else "research_results/data/validation/comparison_wecmp_drill.csv")
 
@@ -104,9 +89,7 @@ class MLController:
     def __init__(self):
         self.topo = load_topo("topology.json")
 
-        # 啟動時重裝 4-component W-ECMP+DRILL 轉發 (覆蓋任何 baseline 殘留設定)。
-        # 否則若上一個跑的是 baseline_ecmp/wecmp (8 個單埠 component)，本控制器發出的
-        # comp_id 1-4 會對應到錯誤的單埠映射，導致流量只走 2-3 個 spine。
+        # Reinstall 4-component W-ECMP+DRILL forwarding (overrides any leftover baseline config)
         print("[init] 重新安裝 4-component W-ECMP+DRILL 轉發 (覆蓋 baseline 設定)...")
         with open('p4app.json') as _f:
             _p4app = json.load(_f)
@@ -116,12 +99,12 @@ class MLController:
 
         self.api_telemetry = SimpleSwitchThriftAPI(self.topo.get_thrift_port(TARGET_LEAF))
 
-        # 載入模型 (安全載入，缺少模型時發出警告)
+        # load models (warn if missing)
         self.models = {}
         for k, v in MODELS.items():
             if os.path.exists(v):
                 mdl = joblib.load(v)
-                # 單列推論用不到平行運算；關掉 joblib worker 可消除 sklearn 平行警告並略為加速
+                # single-row inference: disable joblib workers to silence warnings
                 try:
                     mdl.set_params(n_jobs=1)
                 except Exception:
@@ -134,11 +117,11 @@ class MLController:
 
         self.prev_bytes = {p: 0 for p in PORTS}
 
-        # 預測值平滑緩存
+        # smoothed prediction cache
         self.smoothed_latency = 20.0
         self.smoothed_loss    = 0.0
 
-        # 1s 採集器狀態 (對應 realtime_1s_predictor_topo_indep)
+        # 1s collector state
         self.raw_history      = collections.deque(maxlen=100)
         self.start_time       = time.time()
         self.last_rehash_time = time.time()
@@ -150,8 +133,7 @@ class MLController:
         self.init_baseline()
 
         self._api_control   = SimpleSwitchThriftAPI(self.topo.get_thrift_port(CONTROL_LEAF))
-        # anchor (容量比例權重) 與每埠真實頻寬都取自 install_ecmp_drill_rules 用的同一個來源
-        # (get_ecmp_weights_and_rules，依拓樸圖真實 bw)，故不受 CAPACITY 常數 0.8x bug 影響。
+        # anchor + per-port bw from the same source the dataplane was installed with (graph bw, not CAPACITY)
         self._base_weights, self._hw_rules, self._port_cap = self._load_hw_rules()
         self._grp_handle    = None
         self._mbr_handles   = []
@@ -159,12 +141,11 @@ class MLController:
         self._settle_until  = 0.0
         self._hot_streak    = 0
         self._relax_streak  = 0
-        self._last_state_log = ""   # 被動狀態訊息去重用
-        # 不假設 install 成功：讀回 dataplane 實際的 group/member handle 與 per-class 權重，
-        # 對齊控制器狀態 (同時讓首次權重變動能正確刪除 install 裝的舊 group，不洩漏)。
+        self._last_state_log = ""   # dedup passive state logs
+        # read back the live group/member handles + per-class weights instead of assuming install succeeded
         self._sync_from_dataplane()
 
-        # 初始化 l1 enqueue 計數器基準 (在 _api_control 建立後)
+        # baseline l1 enqueue counters (after _api_control exists)
         with open(os.devnull, 'w') as _f, redirect_stdout(_f), redirect_stderr(_f):
             for p in PORTS:
                 try:
@@ -178,19 +159,12 @@ class MLController:
                     self.prev_bytes[p]      = self.api_telemetry.counter_read('port_bytes_counter', p)[0]
                     self.prev_l2_ingress[p] = self.api_telemetry.counter_read('cnt_ingress', p)[0]
                 except: pass
-        self._prev_sample_t = time.time()   # 上次取樣時間，用於計算真實取樣間隔
-        self._cum_enq  = 0                   # 自開始累積的 l1 enqueue 封包數
-        self._cum_recv = 0                   # 自開始累積的 l2 ingress 封包數 (用於端到端丟包率)
+        self._prev_sample_t = time.time()   # last sample time (for true sampling interval)
+        self._cum_enq  = 0                   # cumulative l1 enqueue packets
+        self._cum_recv = 0                   # cumulative l2 ingress packets (for E2E loss)
 
     def _load_hw_rules(self):
-        """回傳 (anchor 權重, 硬體規則, 每埠真實頻寬)。
-
-        anchor 權重就是 install_ecmp_drill_rules 實際裝進 dataplane 的容量比例權重 (此拓樸 =
-        [3,4,5,6])，同一函式來源 -> 與 dataplane 一致，無需事後讀回核對。
-
-        port_cap = 拓樸圖鏈路 bw × RATE_LIMIT_SCALE：dataplane 被 rate_limiter.py 限速在 0.8x，
-        故有效容量是 0.8x 連結頻寬 (0.48/0.64/0.80/0.96)。用有效容量算利用率，UTIL_SAT 等絕對門檻
-        才對得上真實飽和點 (否則會低估利用率 1.25x、太晚才判定壅塞)。"""
+        """Return (anchor weights, hw rules, per-port effective bw = graph bw x RATE_LIMIT_SCALE)."""
         with open('p4app.json') as f:
             p4app = json.load(f)
         analyzer = TopologyAnalyzer(p4app, self.topo)
@@ -205,12 +179,7 @@ class MLController:
         return weights, rules, port_cap
 
     def _sync_from_dataplane(self):
-        """讀回 dataplane 實際綁定的 group/member handle 與 per-class 權重，對齊控制器狀態。
-
-        - 抓到 group handle / member handles -> 首次權重變動能刪掉 install 裝的舊 group (不洩漏)。
-        - per-class 權重設為 _last_weights；讀不到時退回 anchor。
-        - 若與 anchor 不一致 (install 部分失敗等) -> 補裝一次 anchor 對齊真實狀態。
-        """
+        """Read back the live group/member handles + per-class weights; reinstall anchor if mismatched."""
         import socket
         with open(os.devnull, 'w') as _dn, redirect_stdout(_dn), redirect_stderr(_dn):
             try:
@@ -230,15 +199,12 @@ class MLController:
         cur = [pw.get(rule['ports_and_macs'][0][0], 0) for rule in self._hw_rules]
         self._last_weights = cur if cur and all(w > 0 for w in cur) else list(self._base_weights)
         if self._last_weights != self._base_weights:
-            # dataplane 與 anchor 不符 -> 補裝 anchor (會用上面抓到的 handle 清掉舊 group)
+            # dataplane != anchor -> reinstall anchor (clears the old group via the handle grabbed above)
             if self._safe_apply(self._base_weights):
                 print(f"[init] dataplane 權重 {self._last_weights} != anchor，已補裝 {self._base_weights}")
 
     def _component_stats(self, feats):
-        """每個 class 的 (真實利用率, 佇列熱度)。
-
-        util = Σ原始 mbps / Σ真實埠頻寬 (用 self._port_cap，不經 CAPACITY 常數 -> 不受 0.8x bug)。
-        qfrac = class 內最大佇列深度 / QDEPTH_HOT (>=1 視為被大象塞住)。"""
+        """Per class: (util = Σmbps/Σeffective_cap, qfrac = max class qdepth / QDEPTH_HOT)."""
         utils, qfracs = [], []
         for rule in self._hw_rules:
             ports = [p for p, _ in rule['ports_and_macs']]
@@ -250,25 +216,18 @@ class MLController:
         return utils, qfracs
 
     def _class_pressure(self, utils, qfracs):
-        """class 熱度訊號 = 真實利用率 + Q_WEIGHT × (佇列超出熱門門檻的部分)。
-
-        大象常先把佇列堆高 (qfrac>1) 才反映到利用率，故把佇列壓力併入訊號，讓「選最熱 class」與
-        「算修正量」都看得到佇列驅動的大象，而非只看 Mbps。"""
+        """Hotness signal = util + Q_WEIGHT * max(0, qfrac-1); queue pressure catches elephants early."""
         return [u + Q_WEIGHT * max(0.0, q - 1.0) for u, q in zip(utils, qfracs)]
 
     def is_balanced(self, feats):
-        """各 class 真實利用率差距 < IMBALANCE_TOL 且無佇列塞住 -> 已平衡。"""
+        """Balanced = util spread < IMBALANCE_TOL and no queue jammed."""
         utils, qfracs = self._component_stats(feats)
         if not utils:
             return True
         return (max(utils) - min(utils)) < IMBALANCE_TOL and not any(q >= 1.0 for q in qfracs)
 
     def compute_weights(self, feats):
-        """錨定在容量比例 anchor，依各 class 的『熱度訊號』(利用率+佇列壓力) 做有界 shed/boost。
-
-        熱的 class (大象在此) 降權 -> 少導老鼠進去；冷的 class 升權 -> 老鼠有地方去。偏差回 0 時
-        desired -> base，自然鬆回 anchor。直接有界四捨五入 (不做權重 EMA)：每次整數翻動 = 一次
-        全 rehash，磨損與幅度無關，故反應性交給 PERSIST/SETTLE/COOLDOWN 等閘門控管，不靠 EMA 拖慢。"""
+        """Bounded shed/boost around the capacity anchor by hotness signal; desired->base as imbalance->0."""
         utils, qfracs = self._component_stats(feats)
         sig    = self._class_pressure(utils, qfracs)
         mean_s = sum(sig) / len(sig) if sig else 0.0
@@ -287,7 +246,7 @@ class MLController:
         with open(os.devnull, 'w') as devnull, \
              redirect_stdout(devnull), redirect_stderr(devnull):
 
-            # 1. 建立一個全新的群組並填入新權重對應的成員，避免動態修改正在使用的群組成員導致 BMv2 當機
+            # 1. Build a fresh group (never mutate the in-use group -> can crash BMv2)
             new_grp = self._api_control.act_prof_create_group(sel)
             new_mbr_handles = []
             for idx, rule in enumerate(self._hw_rules):
@@ -297,26 +256,26 @@ class MLController:
                     self._api_control.act_prof_add_member_to_group(sel, m, new_grp)
                     new_mbr_handles.append(m)
 
-            # 2. 獲取現有轉發表中 TARGET_IP 對應的 Entry Handle
+            # 2. Get the TARGET_IP entry handle in the forwarding table
             try:
                 self._api_control.load_table_entries_match_to_handle()
                 entry_handle = self._api_control.get_handle_from_match("w_ecmp_table", [TARGET_IP])
             except Exception:
                 entry_handle = None
 
-            # 3. 如果 entry_handle 存在，原子性地修改表項指向新群組
+            # 3. Atomically repoint the entry to the new group (hitless)
             if entry_handle is not None:
                 try:
                     self._api_control.client.bm_mt_indirect_ws_modify_entry(0, "MyIngress.w_ecmp_table", entry_handle, new_grp)
                 except Exception:
-                    # 如果 Thrift RPC 修改失敗，退回到刪除並重新添加的方案
+                    # fall back to delete-then-add if the atomic modify fails
                     try:
                         self._api_control.table_delete("MyIngress.w_ecmp_table", entry_handle)
                     except Exception:
                         pass
                     entry_handle = None
 
-            # 4. 如果 entry_handle 不存在（首次執行或之前被刪除），則直接添加表項
+            # 4. If no entry handle (first run / deleted), add the entry directly
             if entry_handle is None:
                 subprocess.run(
                     ['simple_switch_CLI', '--thrift-port', str(thrift_port)],
@@ -324,7 +283,7 @@ class MLController:
                     text=True, capture_output=True
                 )
 
-            # 5. 安全地刪除舊群組與舊成員（因為它們現在已經沒有被任何表項引用了，這在 BMv2 中是完全安全的）
+            # 5. Free the old group/members (now unreferenced -> safe in BMv2)
             if self._grp_handle is not None:
                 try:
                     self._api_control.act_prof_delete_group(sel, self._grp_handle)
@@ -333,15 +292,15 @@ class MLController:
                 except Exception:
                     pass
 
-            # 6. 更新實體變數參考
+            # 6. Update local references
             self._grp_handle = new_grp
             self._mbr_handles = new_mbr_handles
 
-        # rehash 後設量測黑窗：接下來 SETTLE_SEC 內佇列正在重分配，不可拿來決策
+        # post-rehash measurement blackout
         self._settle_until = time.time() + SETTLE_SEC
 
     def _safe_apply(self, weights):
-        """套用權重 + 維護狀態；Thrift 失敗時重建連線並回 False。"""
+        """Apply weights + maintain state; rebuild connection and return False on Thrift failure."""
         try:
             self.apply_weights(weights)
         except Exception:
@@ -362,29 +321,29 @@ class MLController:
               "  ".join(f"s{p-1}:{w}" for p, w in sorted(port_weights.items())), flush=True)
 
     def _state_log(self, msg):
-        """被動狀態訊息去重：只在狀態字串改變時印一次，避免每拍洗版干擾單行監控。"""
+        """Dedup passive state logs: print only when the status string changes."""
         if msg != self._last_state_log:
             print(msg, flush=True)
             self._last_state_log = msg
 
     def control_step(self, feats, preds):
         now = time.time()
-        # 1. 黑窗：剛 rehash 完佇列正在重分配，量測不可信 -> 直接跳過 (避免量過渡態又過度修正 -> 擺盪)
+        # 1. Settle blackout: queues still redistributing after a rehash -> don't measure transients
         if now < self._settle_until:
             return
 
         utils, qfracs = self._component_stats(feats)
         if not utils:
             return
-        sig      = self._class_pressure(utils, qfracs)        # 利用率 + 佇列壓力
+        sig      = self._class_pressure(utils, qfracs)
         mean_u   = sum(utils) / len(utils)
         mean_s   = sum(sig) / len(sig)
-        hot_i    = max(range(len(sig)), key=lambda i: sig[i])  # 以「熱度訊號」選最熱 class (含佇列)
+        hot_i    = max(range(len(sig)), key=lambda i: sig[i])  # hottest class by pressure signal
         spread   = max(utils) - min(utils)
         any_qhot = any(q >= 1.0 for q in qfracs)
         balanced = spread < IMBALANCE_TOL and not any_qhot
 
-        # 硬體安全訊號 (不依賴 RF 模型)：真實丟包 / 佇列塞住 / 真實高利用率
+        # Hardware safety signals (no RF model needed): real loss / jammed queue / high util
         hw_loss   = feats.get('hw_loss', 0.0)
         hw_bad    = hw_loss > LOSS_THRESHOLD_PCT or any_qhot or mean_u > UTIL_SAT
         model_bad = (preds.get('anomaly', 0) == 1
@@ -393,14 +352,13 @@ class MLController:
 
         is_hot = (sig[hot_i] - mean_s > IMBALANCE_TOL) or (qfracs[hot_i] >= 1.0) \
                  or (utils[hot_i] > UTIL_SAT)
-        # 證據式鬆回：已偏離 anchor、無熱點、且某個「被 shed 的 class」現在轉冷 (util < 平均-容忍)
-        # -> 造成 shed 的大象多半已離開，才鬆回。靜態下大象不離開、其 class 不會轉冷 -> 不會誤鬆回擺盪。
+        # Evidence-based relax: off-anchor, no hotspot, and a shed class has gone cold (elephant left)
         cold_relax = (self._last_weights != self._base_weights and not is_hot
                       and any(self._last_weights[i] < self._base_weights[i]
                               and utils[i] < mean_u - IMBALANCE_TOL
                               for i in range(len(utils))))
 
-        # persistence：大象的熱/冷會持續，過渡態會散去 -> 連續計數濾雜訊
+        # persistence counters filter transients
         self._hot_streak   = self._hot_streak + 1 if is_hot else 0
         self._relax_streak = self._relax_streak + 1 if cold_relax else 0
 
@@ -408,13 +366,13 @@ class MLController:
             return "  ".join(f"c{i+1}:{u:.2f}/q{q:.2f}"
                              for i, (u, q) in enumerate(zip(utils, qfracs)))
 
-        # A. 熱 class -> shed：硬體證據 (hw_bad) 立刻動；只有模型示警則需持續 PERSIST_TICKS 才動
+        # A. Hot class -> shed: hardware evidence fires now; model-only fires after PERSIST_TICKS
         if is_hot and (hw_bad or (model_bad and self._hot_streak >= PERSIST_TICKS)):
             if now - self._last_adj_time < COOLDOWN_SEC:
                 return
             new = self.compute_weights(feats)
             if new == self._last_weights:
-                # 已到修正邊界 / 權重救不了 (多為大象堆疊在最小權重 class) -> 去重記錄，套冷卻
+                # at correction bound / weights can't help -> log (deduped) and apply cooldown
                 self._last_adj_time = now
                 self._state_log(f"\n[CTRL] at correction bound — cannot improve via weights | {_stat()}")
                 return
@@ -423,7 +381,7 @@ class MLController:
                 self._log_weights("shed/boost", new)
             return
 
-        # B. 證據式鬆回 anchor：被 shed 的 class 持續轉冷 -> 一次跳回容量比例 (一跳/多步都各一次 rehash)
+        # B. Evidence-based relax to anchor: a shed class stays cold -> jump back in one rehash
         if cold_relax and self._relax_streak >= RELAX_TICKS \
                 and now - self._last_adj_time >= COOLDOWN_SEC:
             if self._safe_apply(self._base_weights):
@@ -431,11 +389,11 @@ class MLController:
                 self._log_weights("relax → anchor", self._base_weights)
             return
 
-        # C. 平衡但整體過載：權重無解 (總量過載動權重也救不了) -> 去重記錄、不 rehash
+        # C. Balanced but overloaded: weights can't fix aggregate overload -> log, no rehash
         if balanced and (hw_loss > LOSS_THRESHOLD_PCT or mean_u > UTIL_SAT):
             self._state_log(f"\n[CTRL] balanced overload — no weight solution | {_stat()}")
             return
-        # D. 健康/已收斂 -> 凍結 (不動作)
+        # D. Healthy / converged -> freeze
 
     def get_current_weights(self):
         weights = {p: 1 for p in PORTS}
@@ -478,11 +436,7 @@ class MLController:
         return weights
 
     def _local_current_weights(self):
-        """用控制器狀態產生 per-port 權重，避免每秒透過 Thrift 走訪 selector members。
-
-        _sync_from_dataplane() 啟動時已讀回一次 dataplane 狀態；之後所有成功套用都會更新
-        self._last_weights，因此熱路徑可直接信任本地狀態。
-        """
+        """Per-port weights from local state (trusts _last_weights; avoids walking selector each tick)."""
         weights = {p: 1 for p in PORTS}
         for rule, weight in zip(self._hw_rules, self._last_weights):
             for port, _ in rule['ports_and_macs']:
@@ -490,11 +444,11 @@ class MLController:
         return weights
 
     def collect_1s_data(self, sleep_before=True):
-        """採集 1 秒的數據點與硬體真實數據"""
+        """Collect one 1s data point + hardware ground truth."""
         if sleep_before:
             time.sleep(1.0)
         now_t        = time.time()
-        # dt = 與上次取樣的真實間隔 (含處理時間)；不可只用 sleep(1.0)，否則處理較慢時吞吐量會被高估
+        # dt = true interval since last sample (incl. processing); not just sleep(1.0), else mbps overestimated
         dt           = now_t - self._prev_sample_t
         self._prev_sample_t = now_t
 
@@ -547,13 +501,13 @@ class MLController:
                     self.prev_l1_enq[p]     = l1_enq_pkts
                     self.prev_l2_ingress[p] = l2_ingress_pkts
 
-                    # 瞬時 (每秒) 估計 — 受佇列堆積/延遲影響會偏高，僅供時間序列參考
+                    # instantaneous per-sec estimate (biased by queue buildup; time-series only)
                     if delta_enq > 0:
                         drops            = max(0, delta_enq - delta_ingress)
                         total_delta_enq += delta_enq
                         total_drops     += drops
 
-                    # 累積總量 (不夾值，全埠) — 用於端到端正確丟包率，堆積/排空會自然抵消
+                    # cumulative totals -> correct E2E loss rate (buildup/drain cancel out)
                     self._cum_enq  += delta_enq
                     self._cum_recv += delta_ingress
                 except: pass
@@ -615,16 +569,16 @@ class MLController:
                 for p in PORTS:
                     feats[f'src1_port{p}_load_util']  = data_row[f'src1_port{p}_mbps'] / CAPACITY[p]
                     feats[f'src1_port{p}_qdepth_max'] = data_row[f'src1_port{p}_qdepth']
-                    feats[f'src1_port{p}_mbps']       = data_row[f'src1_port{p}_mbps']  # 真實利用率訊號 (不經 CAPACITY)
+                    feats[f'src1_port{p}_mbps']       = data_row[f'src1_port{p}_mbps']  # raw util signal (bypasses CAPACITY)
                 feats['qdepth_max_imbalance'] = last_row['QDepth_Imbalance']
                 feats['Total_Util_Sum']       = last_row['Total_Util_Sum']
-                feats['hw_loss']              = data_row['Real_HW_Loss_Percent']  # 硬體安全觸發 (不依賴 RF 模型)
+                feats['hw_loss']              = data_row['Real_HW_Loss_Percent']  # hardware safety trigger
 
                 status  = "NORMAL" if preds.get('anomaly', 0) == 0 else "\033[91mANOMALY\033[0m"
                 hw_lat  = data_row['Real_HW_Latency_ms']
                 hw_loss = data_row['Real_HW_Loss_Percent']
 
-                # 記錄一列 (與 baseline / plot_1s_metrics 完全相同欄位 + 各交換機 util)
+                # log one row (same columns as baselines + per-switch util)
                 results.append({
                     'Timestamp':  datetime.now(),
                     'Pred_Lat':   self.smoothed_latency,
@@ -643,7 +597,7 @@ class MLController:
                       f"Loss: {self.smoothed_loss:4.1f}/{hw_loss:4.1f}% | "
                       f"Util: {feats['Total_Util_Sum']:4.2f}",
                       end='', flush=True)
-                # 靜態模式：權重永不變動 (啟動時已裝好容量比例 anchor)，不參考任何指標
+                # static mode: weights never change (anchor installed at startup)
                 if ML_WEIGHT_ENABLE:
                     self.control_step(feats, preds)
         except KeyboardInterrupt: print("\n停止。")
