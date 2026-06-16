@@ -17,11 +17,7 @@ __pycache__/
 
 # IDE / tool session files
 .claude
-CLAUDE.md
-main/.antigravitycli/
-main/.gemini/
-main/skills/
-main/.vscode/
+.codex
 
 # -------------------------------------------------------
 # main/ — old drill_4_4 leftover (full copy, 5022 files, 116MB)
