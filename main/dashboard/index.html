@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI-Drill Topology</title>
+  <link rel="stylesheet" href="/dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>AI-Drill Fabric</h1>
+      <div class="subtle" id="statusText">Connecting</div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><span>Pred Lat</span><strong id="predLat">-</strong></div>
+      <div class="metric"><span>HW Lat</span><strong id="realLat">-</strong></div>
+      <div class="metric"><span>Pred Loss</span><strong id="predLoss">-</strong></div>
+      <div class="metric"><span>HW Loss</span><strong id="realLoss">-</strong></div>
+      <div class="metric"><span>Total</span><strong id="totalMbps">-</strong></div>
+      <div class="metric"><span>Rehash</span><strong id="rehashAge">-</strong></div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="canvas-panel">
+      <svg id="topology" viewBox="0 0 1200 660" role="img" aria-label="AI-Drill topology"></svg>
+    </section>
+
+    <aside class="detail-panel">
+      <div class="panel-head">
+        <div>
+          <h2 id="detailTitle">Fabric</h2>
+          <div class="subtle" id="detailMeta">16 switches, 8 hosts</div>
+        </div>
+        <div class="pill" id="modePill">-</div>
+      </div>
+
+      <section class="section">
+        <h3>W-ECMP Components</h3>
+        <div id="components" class="components"></div>
+      </section>
+
+      <section class="section">
+        <h3>Ports</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Port</th>
+                <th>Peer</th>
+                <th>Util</th>
+                <th>Mbps</th>
+                <th>Queue</th>
+                <th>In</th>
+                <th>Out</th>
+              </tr>
+            </thead>
+            <tbody id="portsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>

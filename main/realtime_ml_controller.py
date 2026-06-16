@@ -10,6 +10,11 @@ import logging
 import subprocess
 import warnings
 import collections
+import argparse
+import copy
+import threading
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse
 from datetime import datetime
 from contextlib import redirect_stdout, redirect_stderr
 
@@ -61,6 +66,10 @@ WEIGHT_MAX           = 8
 OUTPUT_CSV = ("research_results/data/validation/comparison_ml.csv" if ML_WEIGHT_ENABLE
               else "research_results/data/validation/comparison_wecmp_drill.csv")
 
+DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "dashboard")
+DEFAULT_WEB_HOST = "127.0.0.1"
+DEFAULT_WEB_PORT = 8080
+
 MODELS = {
     "latency": "rf_model_latency_1s.pkl",
     "loss":    "rf_model_loss_1s.pkl",
@@ -85,9 +94,96 @@ for _k in range(3):
     ])
 
 
+class DashboardHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, server_address, controller):
+        self.controller = controller
+        super().__init__(server_address, DashboardHandler)
+
+
+class DashboardHandler(BaseHTTPRequestHandler):
+    server_version = "AI-DrillDashboard/1.0"
+
+    def log_message(self, fmt, *args):
+        return
+
+    def _send_bytes(self, body, content_type, status=200):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_json(self, payload):
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        self._send_bytes(body, "application/json; charset=utf-8")
+
+    def _send_static(self, filename, content_type):
+        path = os.path.join(DASHBOARD_DIR, filename)
+        try:
+            with open(path, "rb") as f:
+                self._send_bytes(f.read(), content_type)
+        except FileNotFoundError:
+            self._send_bytes(b"not found", "text/plain; charset=utf-8", status=404)
+
+    def do_GET(self):
+        route = urlparse(self.path).path
+        if route == "/":
+            self._send_static("index.html", "text/html; charset=utf-8")
+        elif route == "/dashboard.css":
+            self._send_static("dashboard.css", "text/css; charset=utf-8")
+        elif route == "/dashboard.js":
+            self._send_static("dashboard.js", "application/javascript; charset=utf-8")
+        elif route == "/switch.svg":
+            path = os.path.join(os.path.dirname(__file__), "125_layer-2-remote-switch.37d2c74448.svg")
+            try:
+                with open(path, "rb") as f:
+                    self._send_bytes(f.read(), "image/svg+xml")
+            except FileNotFoundError:
+                self._send_bytes(b"not found", "text/plain; charset=utf-8", status=404)
+        elif route == "/api/topology":
+            self._send_json(self.server.controller.get_dashboard_topology())
+        elif route == "/api/snapshot":
+            self._send_json(self.server.controller.get_dashboard_snapshot())
+        elif route == "/events":
+            self._stream_events()
+        else:
+            self._send_bytes(b"not found", "text/plain; charset=utf-8", status=404)
+
+    def _stream_events(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+        last_version = None
+        try:
+            while True:
+                payload = self.server.controller.get_dashboard_snapshot()
+                version = payload.get("version")
+                if version != last_version:
+                    data = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+                    self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                    last_version = version
+                time.sleep(0.5)
+        except (BrokenPipeError, ConnectionResetError):
+            return
+
+
 class MLController:
     def __init__(self):
         self.topo = load_topo("topology.json")
+        self._web_server = None
+        self._web_thread = None
+        self._dashboard_lock = threading.Lock()
+        self._dashboard_version = 0
+        self._dashboard_snapshot = self._empty_dashboard_snapshot()
+        self._dashboard_topology = self._build_dashboard_topology()
+        self._dashboard_apis = {}
+        self._dashboard_prev = {}
 
         # Reinstall 4-component W-ECMP+DRILL forwarding (overrides any leftover baseline config)
         print("[init] 重新安裝 4-component W-ECMP+DRILL 轉發 (覆蓋 baseline 設定)...")
@@ -151,6 +247,261 @@ class MLController:
                 try:
                     self.prev_l1_enq[p] = self._api_control.counter_read('cnt_enq', p)[0]
                 except: pass
+        self._init_dashboard_telemetry()
+
+    def _empty_dashboard_snapshot(self):
+        return {
+            "version": 0,
+            "timestamp": None,
+            "stale": True,
+            "mode": "W-ECMP+DRILL+ML" if ML_WEIGHT_ENABLE else "W-ECMP+DRILL",
+            "ml": {},
+            "weights": {},
+            "components": [],
+            "switches": {},
+        }
+
+    def _build_dashboard_topology(self):
+        with open("topology.json") as f:
+            topo_data = json.load(f)
+        with open("p4app.json") as f:
+            p4app = json.load(f)
+
+        nodes = []
+        switches = {}
+        hosts = {}
+        for n in topo_data.get("nodes", []):
+            node_id = n.get("id")
+            if not node_id:
+                continue
+            kind = "host" if n.get("isHost") else ("spine" if node_id.startswith("s") else "leaf")
+            item = {
+                "id": node_id,
+                "kind": kind,
+                "ip": n.get("ip", ""),
+                "thrift_port": n.get("thrift_port"),
+                "device_id": n.get("device_id"),
+            }
+            nodes.append(item)
+            if kind == "host":
+                hosts[node_id] = item
+            else:
+                switches[node_id] = item
+
+        raw_bw = {}
+        for link in p4app.get("topology", {}).get("links", []):
+            if len(link) >= 3 and isinstance(link[2], dict) and "bw" in link[2]:
+                raw_bw[(link[0], link[1])] = link[2]["bw"]
+                raw_bw[(link[1], link[0])] = link[2]["bw"]
+
+        links = []
+        switch_ports = {name: {} for name in switches}
+        for edge in topo_data.get("edges", []):
+            src = edge.get("source") or edge.get("node1")
+            dst = edge.get("target") or edge.get("node2")
+            if not src or not dst:
+                continue
+            bw = edge.get("bw", raw_bw.get((src, dst), 0))
+            link = {
+                "source": src,
+                "target": dst,
+                "bw": bw,
+                "effective_bw": bw * RATE_LIMIT_SCALE if bw else 0,
+                "ports": {
+                    src: edge.get("port1") if edge.get("node1") == src else edge.get("port2"),
+                    dst: edge.get("port2") if edge.get("node2") == dst else edge.get("port1"),
+                },
+                "interfaces": {
+                    src: edge.get("intfName1") if edge.get("node1") == src else edge.get("intfName2"),
+                    dst: edge.get("intfName2") if edge.get("node2") == dst else edge.get("intfName1"),
+                }
+            }
+            links.append(link)
+            for node, other in ((src, dst), (dst, src)):
+                if node not in switch_ports:
+                    continue
+                port = link["ports"].get(node)
+                if port is None:
+                    continue
+                switch_ports[node][str(port)] = {
+                    "port": port,
+                    "neighbor": other,
+                    "interface": link["interfaces"].get(node, ""),
+                    "bw": bw,
+                    "effective_bw": bw * RATE_LIMIT_SCALE if bw else 0,
+                    "role": "host" if other in hosts else ("leaf" if other.startswith("l") else "spine"),
+                }
+
+        for sw, ports in switch_ports.items():
+            switches[sw]["ports"] = [ports[k] for k in sorted(ports, key=lambda x: int(x))]
+
+        return {
+            "nodes": nodes,
+            "links": links,
+            "switches": switches,
+            "hosts": hosts,
+            "control_leaf": CONTROL_LEAF,
+            "target_leaf": TARGET_LEAF,
+            "target_ip": TARGET_IP,
+            "queue_limit": 64,
+            "rate_limit_scale": RATE_LIMIT_SCALE,
+        }
+
+    def _init_dashboard_telemetry(self):
+        switches = self._dashboard_topology.get("switches", {})
+        with open(os.devnull, 'w') as _dn, redirect_stdout(_dn), redirect_stderr(_dn):
+            for sw in switches:
+                try:
+                    api = SimpleSwitchThriftAPI(self.topo.get_thrift_port(sw))
+                    self._dashboard_apis[sw] = api
+                    self._dashboard_prev[sw] = {}
+                    for port_meta in switches[sw].get("ports", []):
+                        p = int(port_meta["port"])
+                        self._dashboard_prev[sw][p] = {
+                            "bytes": self._counter_value(api, "port_bytes_counter", p),
+                            "ingress": self._counter_value(api, "cnt_ingress", p),
+                            "egress": self._counter_value(api, "cnt_egress", p),
+                            "enq": self._counter_value(api, "cnt_enq", p),
+                        }
+                except Exception:
+                    self._dashboard_apis[sw] = None
+
+    def _counter_value(self, api, name, index):
+        try:
+            val = api.counter_read(name, index)
+            return val[0] if isinstance(val, (list, tuple)) else val
+        except Exception:
+            return 0
+
+    def _register_value(self, api, name, index):
+        try:
+            val = api.register_read(name, index)
+            return val[index] if isinstance(val, list) and len(val) > index else val
+        except Exception:
+            return 0
+
+    def _collect_dashboard_switches(self, dt):
+        out = {}
+        with open(os.devnull, 'w') as _dn, redirect_stdout(_dn), redirect_stderr(_dn):
+            for sw, meta in self._dashboard_topology.get("switches", {}).items():
+                api = self._dashboard_apis.get(sw)
+                sw_ports = []
+                for port_meta in meta.get("ports", []):
+                    p = int(port_meta["port"])
+                    prev = self._dashboard_prev.setdefault(sw, {}).setdefault(
+                        p, {"bytes": 0, "ingress": 0, "egress": 0, "enq": 0})
+                    if api is None:
+                        metrics = {"queue_depth": 0, "mbps": 0.0, "ingress_pps": 0.0,
+                                   "egress_pps": 0.0, "enqueue_pps": 0.0,
+                                   "cnt_ingress": 0, "cnt_egress": 0, "cnt_enq": 0,
+                                   "connected": False}
+                    else:
+                        q = self._register_value(api, "q_depth_reg", p)
+                        b = self._counter_value(api, "port_bytes_counter", p)
+                        ci = self._counter_value(api, "cnt_ingress", p)
+                        ce = self._counter_value(api, "cnt_egress", p)
+                        cq = self._counter_value(api, "cnt_enq", p)
+                        metrics = {
+                            "queue_depth": q,
+                            "mbps": max(0, b - prev["bytes"]) * 8 / max(dt, 1e-6) / 1_000_000,
+                            "ingress_pps": max(0, ci - prev["ingress"]) / max(dt, 1e-6),
+                            "egress_pps": max(0, ce - prev["egress"]) / max(dt, 1e-6),
+                            "enqueue_pps": max(0, cq - prev["enq"]) / max(dt, 1e-6),
+                            "cnt_ingress": ci,
+                            "cnt_egress": ce,
+                            "cnt_enq": cq,
+                            "connected": True,
+                        }
+                        prev.update({"bytes": b, "ingress": ci, "egress": ce, "enq": cq})
+                    eff = float(port_meta.get("effective_bw") or 0)
+                    metrics["utilization"] = metrics["mbps"] / eff if eff > 0 else 0.0
+                    sw_ports.append({**port_meta, **metrics})
+                out[sw] = {
+                    "connected": api is not None,
+                    "ports": sw_ports,
+                    "max_queue_depth": max((p["queue_depth"] for p in sw_ports), default=0),
+                    "total_mbps": sum(p["mbps"] for p in sw_ports),
+                }
+        return out
+
+    def _dashboard_components(self):
+        components = []
+        for idx, rule in enumerate(self._hw_rules):
+            current = self._last_weights[idx] if idx < len(self._last_weights) else None
+            anchor = self._base_weights[idx] if idx < len(self._base_weights) else None
+            members = []
+            for port, _ in rule["ports_and_macs"]:
+                members.append({
+                    "port": port,
+                    "spine": f"s{port - 1}" if port in PORTS else f"port{port}",
+                    "effective_bw": self._port_cap.get(port, CAPACITY.get(port, 0)),
+                })
+            components.append({
+                "id": rule["comp_id"],
+                "num_nhops": rule["num_nhops"],
+                "anchor_weight": anchor,
+                "current_weight": current,
+                "members": members,
+            })
+        return components
+
+    def _update_dashboard_snapshot(self, data_row, last_row, preds, feats, dt):
+        switches = self._collect_dashboard_switches(dt)
+        weights_by_port = self._local_current_weights()
+        weights = {
+            f"s{p-1}": {
+                "port": p,
+                "current": weights_by_port.get(p, 1),
+                "anchor": next((self._base_weights[i]
+                                for i, r in enumerate(self._hw_rules)
+                                if any(mp == p for mp, _ in r["ports_and_macs"])), None),
+            }
+            for p in PORTS
+        }
+        snap = {
+            "version": self._dashboard_version + 1,
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "stale": False,
+            "mode": "W-ECMP+DRILL+ML" if ML_WEIGHT_ENABLE else "W-ECMP+DRILL",
+            "ml": {
+                "pred_latency_ms": float(self.smoothed_latency),
+                "real_latency_ms": float(data_row["Real_HW_Latency_ms"]),
+                "pred_loss_pct": float(self.smoothed_loss),
+                "real_loss_pct": float(data_row["Real_HW_Loss_Percent"]),
+                "anomaly": int(preds.get("anomaly", 0)),
+                "total_mbps": float(last_row["Total_Actual_Mbps"]),
+                "total_util_sum": float(feats["Total_Util_Sum"]),
+                "last_rehash_seconds": float(data_row["Time_Since_Last_Rehash_s"]),
+                "is_rehash_event": int(data_row["Is_Rehash_Event"]),
+            },
+            "weights": weights,
+            "components": self._dashboard_components(),
+            "switches": switches,
+        }
+        with self._dashboard_lock:
+            self._dashboard_version = snap["version"]
+            self._dashboard_snapshot = snap
+
+    def get_dashboard_topology(self):
+        return copy.deepcopy(self._dashboard_topology)
+
+    def get_dashboard_snapshot(self):
+        with self._dashboard_lock:
+            return copy.deepcopy(self._dashboard_snapshot)
+
+    def start_dashboard(self, host=DEFAULT_WEB_HOST, port=DEFAULT_WEB_PORT):
+        if self._web_server is not None:
+            return
+        self._web_server = DashboardHTTPServer((host, port), self)
+        self._web_thread = threading.Thread(target=self._web_server.serve_forever, daemon=True)
+        self._web_thread.start()
+        print(f"[dashboard] http://{host}:{port}", flush=True)
+
+    def stop_dashboard(self):
+        if self._web_server is not None:
+            self._web_server.shutdown()
+            self._web_server.server_close()
+            self._web_server = None
 
     def init_baseline(self):
         with open(os.devnull, 'w') as f, redirect_stdout(f), redirect_stderr(f):
@@ -524,7 +875,9 @@ class MLController:
 
         return row
 
-    def run(self, duration=None):
+    def run(self, duration=None, web_host=DEFAULT_WEB_HOST, web_port=DEFAULT_WEB_PORT, enable_web=True):
+        if enable_web:
+            self.start_dashboard(web_host, web_port)
         print("\n" + "="*125)
         dur_txt = f"{duration}s" if duration else "持續 (Ctrl-C 停止)"
         mode_txt = ("W-ECMP+DRILL+ML (動態調權)" if ML_WEIGHT_ENABLE
@@ -535,6 +888,7 @@ class MLController:
         results = []
         start = time.time()
         next_tick = start
+        last_dashboard_t = start
         try:
             while True:
                 next_tick += 1.0
@@ -577,6 +931,9 @@ class MLController:
                 status  = "NORMAL" if preds.get('anomaly', 0) == 0 else "\033[91mANOMALY\033[0m"
                 hw_lat  = data_row['Real_HW_Latency_ms']
                 hw_loss = data_row['Real_HW_Loss_Percent']
+                dashboard_dt = max(time.time() - last_dashboard_t, 1e-6)
+                last_dashboard_t = time.time()
+                self._update_dashboard_snapshot(data_row, last_row, preds, feats, dashboard_dt)
 
                 # log one row (same columns as baselines + per-switch util)
                 results.append({
@@ -602,6 +959,7 @@ class MLController:
                     self.control_step(feats, preds)
         except KeyboardInterrupt: print("\n停止。")
         finally:
+            self.stop_dashboard()
             if results:
                 os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
                 pd.DataFrame(results).to_csv(OUTPUT_CSV, index=False)
@@ -609,6 +967,11 @@ class MLController:
 
 
 if __name__ == "__main__":
-    duration = int(sys.argv[1]) if len(sys.argv) > 1 else None
+    parser = argparse.ArgumentParser(description="W-ECMP+DRILL+ML controller with optional dashboard")
+    parser.add_argument("duration", nargs="?", type=int, help="run duration in seconds")
+    parser.add_argument("--web-host", default=DEFAULT_WEB_HOST)
+    parser.add_argument("--web-port", type=int, default=DEFAULT_WEB_PORT)
+    parser.add_argument("--no-web", action="store_true")
+    args = parser.parse_args()
     ctrl = MLController()
-    ctrl.run(duration)
+    ctrl.run(args.duration, web_host=args.web_host, web_port=args.web_port, enable_web=not args.no_web)
